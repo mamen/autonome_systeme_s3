@@ -1,0 +1,43 @@
+Doku: 
+https://docs.pixycam.com/wiki/doku.php?id=wiki:v1:start
+
+Folgen Sie zur Installation von Pixy den Schritten von "Connecting Pixy to ..."/Raspberry Pi.
+
+Den Abschnitt 2.1 können Sie überspringen. Die Installation der Hardware geht über USB. Sie brauchen ein Kabel mit USB zu Firewire. 
+Machen Sie mit 2.2.3 weiter (da Sie ja schon Raspberrian installiert haben, siehe mein setupManual).
+Bevor Sie dann hello_pixy ausprobieren, arbeiten Sie Basics/Teach Pixy an object durch.
+
+Wenn alles funktioniert, können Sie nun Pixy in Ros einbinden. Es gibt dazu auf dem Internet zwei Quellen mit Code: 
+- https://github.com/jeskesen/pixy_ros 
+  damit kann man über Ros Subscriber die x,y-Koordinaten erkannter Blobs abfragen
+
+- https://github.com/erlerobot/erle_pixy
+  damit kann man direkt auf das Bild der Kamera zugreifen
+
+Leider gehen beide Zugriffsarten nicht zusammen. Für eine Aufgabe des Turtlebots muss man sich für eine der beiden Arten entscheiden.
+Ausweg: eine zusätzliche USB-Webkamera installieren, um direkt Kamerabilder zu verarbeiten.
+
+WICHTIG:
+die beiden Codequellen haben ein paar Probleme bei der Installation. Nehmen Sie deshalb die leicht modifizierten (korrigierten) Versionen, die ich auf das Ilias unter TurtlebotCode hochgeladen habe: 
+-  pixy_ros-master.tar     (jeskesen, siehe oben)
+-  erle_pixy-master.tar    (erle, siehe oben)
+und entpacken Sie den Inhalt auf dem Turtlebot (!) jeweils unter dem Verzeichnis ~/catkin_ws/src.
+Starten Sie dann einen Build mit "catkin_make", und schliessen Sie mit "source <your catkin_worspace>/devel/setup.bash" ab.
+Bei erle_pixy müssen Sie die Kamera aktivieren 
+mit dem Befehl auf dem Turtlebot: 
+   "rosrun beginner_camera pixy_cam". 
+Anschliessend können Sie sich das Kamerabild auf dem Notebook anschauen über
+   "rosrun image_view image_view image:=/image_raw". 
+Ich habe Ihnen auf das Ilias zwei Convenience Shellskripts unter TurtlebotCode gelegt:
+- initializeTurtleBlobs.sh
+- initializeTurtleCam.sh
+Legen Sie diese Scripts im Home-Verzeichnis des Turtlebots (home/pi) ab. 
+Wenn Sie dann den Turtlebot starten, können Sie vom Remote Notebook aus eine ssh Shell zu Ihrem
+Turtlebot öffnen, und eines der beiden Skripts starten ("source initializeTurtleCam.sh" z.B.) je nachdem,
+welche Art Sie wollen. Achtung: wollen Sie die Art wechseln (z.B. von Cam zu Blobs), so müssen Sie den
+Turtlebot neu booten (Aus- und Einschalten), möglichst vorher alle ssh-Verbindungen schliessen mit "exit".
+In diesen Scripts wird auch Bringup (über "roslaunch turtlebot3_bringup turtlebot3_robot.launch") gestartet. Im Normalfall ist es das Einzige, was Sie machen müssen, um Ihren Turtlebot zu initialisieren, damit er über das Notebook mit Ihrem Controller z.B. gesteuert werden kann.
+
+ 
+ 
+
