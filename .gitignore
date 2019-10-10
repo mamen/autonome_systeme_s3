@@ -104,6 +104,8 @@ venv.bak/
 .mypy_cache/
 
 # src projects which were not written by us
-src/3rdparty/*
 build/*
 devel/*
+src/turtlebot3/*
+src/turtlebot3_msgs/*
+src/turtlebot3_simulations/*
