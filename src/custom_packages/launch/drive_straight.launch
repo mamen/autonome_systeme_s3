@@ -2,18 +2,15 @@
 
   <!-- Arguments -->
   <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="sensor_range" default="1.0"/>
 
 
-  <!-- AMCL -->
-  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
+  <include file="$(find explore)/launch/explore.launch"/>
+
+
 
   <node pkg="custom_packages" type="drive_straight.py" name="drive_straight" output="screen">
   </node>
 
-   <!-- Map server -->
-<!--  <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)"/>-->
 
-  <!-- rviz -->
-  <node pkg="rviz" type="rviz" name="rviz" required="true"
-        args="-d $(find turtlebot3_navigation)/rviz/turtlebot3_navigation.rviz"/>
 </launch>
