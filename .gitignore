@@ -109,6 +109,7 @@ venv.bak/
 # src projects which were not written by us
 build/*
 devel/*
+src/m-explore/*
 src/turtlebot3/*
 src/turtlebot3_msgs/*
 src/turtlebot3_simulations/*
