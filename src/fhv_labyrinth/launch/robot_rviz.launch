@@ -1,0 +1,4 @@
+<launch>
+  <!-- Visualzation -->
+  <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find fhv_labyrinth)/rviz/turtlebot3_fhv_labyrinth.rviz"/>
+</launch>

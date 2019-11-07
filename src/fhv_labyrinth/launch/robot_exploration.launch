@@ -1,26 +1,7 @@
 <launch>
-
   <!-- Arguments -->
-  <!-- <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
-  <arg name="configuration_basename" default="turtlebot3_lds_2d.lua"/>
-  <arg name="sensor_range" default="1.0"/>
-  <arg name="cmd_vel_topic" default="/cmd_vel" />
-  <arg name="odom_topic" default="odom" /> -->
   
-  <!-- roslaunch turtlebot3_slam turtlebot3_slam.launch slam_methods:=gmapping -->
-  <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
-    <arg name="slam_methods" value="gmapping" />
-  </include>
-  
-  <!-- roslaunch turtlebot3_navigation amcl.launch -->
-  <include file="$(find turtlebot3_navigation)/launch/amcl.launch"/>
-
-  <!-- roslaunch turtlebot3_navigation move_base.launch -->
-  <include file="$(find turtlebot3_navigation)/launch/move_base.launch"/>
-  
-  <!-- roslaunch explore_lite explore.launch -->
-  <!-- roslaunch explore_lite explore_costmap.launch -->
-  <!-- <include file="$(explore_lite)/launch/explore.launch"/> -->
+  <!-- Autonomous Exploration -->
   <node pkg="explore_lite" type="explore" respawn="false" name="explore" output="screen">
     <!-- robot_base_frame (string, default: base_link) -->
     <!-- The name of the base frame of the robot. This is used for determining robot position on map. Mandatory. -->
@@ -42,7 +23,7 @@
 
     <!-- planner_frequency (double, default: 1.0) -->
     <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
-    <param name="planner_frequency" value="1.0"/><!-- 0.33 -->
+    <param name="planner_frequency" value="0.1"/><!-- 0.33 -->
 
     <!-- progress_timeout (double, default: 30.0) -->
     <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
@@ -50,7 +31,7 @@
 
     <!-- potential_scale (double, default: 1e-3) -->
     <!-- Used for weighting frontiers. This multiplicative parameter affects frontier potential component of the frontier weight (distance to frontier). -->
-    <param name="potential_scale" value="0.001"/><!-- 3.0 -->
+    <param name="potential_scale" value="0.01"/><!-- 3.0 -->
 
     <!-- orientation_scale (double, default: 0) -->
     <!-- Used for weighting frontiers. This multiplicative parameter affects frontier orientation component of the frontier weight. This parameter does currently nothing and is provided solely for forward compatibility. -->
@@ -58,7 +39,7 @@
 
     <!-- gain_scale (double, default: 1.0) -->
     <!-- Used for weighting frontiers. This multiplicative parameter affects frontier gain component of the frontier weight (frontier size). -->
-    <param name="gain_scale" value="3.0"/><!-- 1.0 -->
+    <param name="gain_scale" value="0.5"/><!-- 1.0 -->
 
     <!-- transform_tolerance (double, default: 0.3) -->
     <!-- Transform tolerance to use when transforming robot pose. -->
@@ -66,20 +47,6 @@
 
     <!-- min_frontier_size (double, default: 0.5) -->
     <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
-    <param name="min_frontier_size" value="0.2"/><!-- 0.75 -->
+    <param name="min_frontier_size" value="0.05"/><!-- 0.75 -->
   </node>
-
-  <!-- <group ns="map_merge">
-    <node pkg="multirobot_map_merge" type="map_merge" respawn="false" name="map_merge" output="screen">
-      <param name="robot_map_topic" value="map"/>
-      <param name="robot_namespace" value=""/>
-      <param name="merged_map_topic" value="map"/>
-      <param name="world_frame" value="world"/>
-      <param name="known_init_poses" value="false"/>
-      <param name="merging_rate" value="0.5"/>
-      <param name="discovery_rate" value="0.05"/>
-      <param name="estimation_rate" value="0.1"/>
-      <param name="estimation_confidence" value="1.0"/>
-    </node>
-  </group> -->
 </launch>
