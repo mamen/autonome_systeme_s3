@@ -164,6 +164,7 @@ include_directories(
 
 catkin_install_python(PROGRAMS
     nodes/detectTags.py
+    nodes/manageTags.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
