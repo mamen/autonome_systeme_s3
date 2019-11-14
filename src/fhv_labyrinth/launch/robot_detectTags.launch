@@ -5,6 +5,7 @@
   <arg name="img_topic" default="/" />
 
   <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
-         <param name="img_topic" value="image_raw" />
+         <param name="image_topic" value="image_raw" />
+         <param name="odometry_topic" value="odom" />
   </node>
 </launch>

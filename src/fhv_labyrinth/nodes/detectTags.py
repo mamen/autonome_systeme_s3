@@ -3,6 +3,7 @@
 import rospy
 from sensor_msgs.msg import Image
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Point
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -16,7 +17,7 @@ class Color(Enum):
 
 class Detection():
 
-    current_pose = (0, 0, 0)
+    current_pose =  Point(0, 0, 0)
 
     def __init__(self):
         self.detectTags()
@@ -55,20 +56,21 @@ class Detection():
                 # TODO:
                 # publish to token-found-topic
 
-            cv.imshow('res', res)
-            cv.waitKey(1)
+            # cv.imshow('res', res)
+            # cv.waitKey(1)
 
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
 
     def detectTags(self):
 
-        IMAGE_TOPIC = rospy.get_param("~img_topic")
+        IMAGE_TOPIC = rospy.get_param("~image_topic")
+        ODOMETRY_TOPIC = rospy.get_param("~odometry_topic")
 
         try:
             while not rospy.is_shutdown():
                 rospy.Subscriber(IMAGE_TOPIC, Image, self.processImage)
-                rospy.Subscriber("odom", Odometry, self.setCurrentPose)
+                rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
                 rospy.spin()
 
         finally:
