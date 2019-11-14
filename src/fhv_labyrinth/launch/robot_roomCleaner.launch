@@ -1,0 +1,11 @@
+<launch>
+
+  <!-- Arguments -->
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="map_topic" default="/" />
+
+  <node pkg="fhv_labyrinth" type="roomCleaner.py" name="roomCleaner" output="screen">
+         <param name="map_topic" value="map" />
+  </node>
+
+</launch>
