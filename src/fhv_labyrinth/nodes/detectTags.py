@@ -50,14 +50,14 @@ class Detection():
             mask = cv.inRange(hsv, LOWER_LIMIT, UPPER_LIMIT)
             res = cv.bitwise_and(frame, frame, mask=mask)
 
+            cv.imshow('mask', frame)
+            cv.waitKey(1)
+
             if cv.mean(res) > (4, 4, 4):
                 rospy.loginfo("TAG FOUND @ x: {} y: {} z: {}".format(self.current_pose.x, self.current_pose.y, self.current_pose.z))
 
-                # TODO:
-                # publish to token-found-topic
-
-            # cv.imshow('res', res)
-            # cv.waitKey(1)
+                pub = rospy.Publisher('tags_found', Point, queue_size=10)
+                pub.publish(self.current_pose)
 
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
