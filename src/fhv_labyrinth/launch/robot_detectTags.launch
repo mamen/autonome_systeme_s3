@@ -1,0 +1,11 @@
+<launch>
+
+  <!-- Arguments -->
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="img_topic" default="/" />
+
+  <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
+         <param name="img_topic" value="image_raw" />
+  </node>
+
+</launch>
