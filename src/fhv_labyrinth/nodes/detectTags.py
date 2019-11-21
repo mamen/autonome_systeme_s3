@@ -40,8 +40,12 @@ class Detection:
             return True
 
         for t in self.tags_found:
-            if self.calcDistance(t, newTag) < 0.15:
+            distance = self.calcDistance(t, newTag)
+            if distance < 0.66:
                 return False
+            else:
+                rospy.loginfo(distance)
+
 
         return True
 

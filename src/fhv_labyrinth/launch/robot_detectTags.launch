@@ -7,7 +7,7 @@
   <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
          <param name="image_topic" value="image_raw" />
          <param name="odometry_topic" value="odom" />
-        <param name="num_tags_in_maze" value="5" />
+        <param name="num_tags_in_maze" value="8" />
         <param name="show_camera" value="True" />
   </node>
 </launch>
