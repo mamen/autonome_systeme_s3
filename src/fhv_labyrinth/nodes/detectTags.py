@@ -15,11 +15,16 @@ class Color(Enum):
     BLUE = 2
 
 
-class Detection():
+class Detection:
 
-    current_pose =  Point(0, 0, 0)
+    current_pose = Point(0, 0, 0)
+    max_num_tags = -1
+    tags_found = []
+    show_cam = False
 
-    def __init__(self):
+    def __init__(self, num_tags, show_cam):
+        self.max_num_tags = num_tags
+        self.show_cam = show_cam
         self.detectTags()
 
     def setCurrentPose(self, data):
@@ -29,7 +34,22 @@ class Detection():
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
+    def isNewTag(self, newTag):
+
+        if len(self.tags_found) == 0:
+            return True
+
+        for t in self.tags_found:
+            if self.calcDistance(t, newTag) < 0.15:
+                return False
+
+        return True
+
+    def calcDistance(self, t1, t2):
+        return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
+
     def processImage(self, data):
+
         COLOR = Color.RED
 
         LOWER_LIMIT = UPPER_LIMIT = np.array([0, 0, 0])
@@ -50,11 +70,17 @@ class Detection():
             mask = cv.inRange(hsv, LOWER_LIMIT, UPPER_LIMIT)
             res = cv.bitwise_and(frame, frame, mask=mask)
 
-            cv.imshow('mask', frame)
-            cv.waitKey(1)
+            if self.show_cam:
+                cv.imshow('mask', frame)
+                cv.waitKey(1)
 
-            if cv.mean(res) > (4, 4, 4):
-                rospy.loginfo("TAG FOUND @ x: {} y: {} z: {}".format(self.current_pose.x, self.current_pose.y, self.current_pose.z))
+            if cv.mean(res) > (4, 4, 4) and self.isNewTag(self.current_pose):
+                rospy.loginfo("NEW TAG FOUND @ x: {} y: {} z: {}".format(self.current_pose.x, self.current_pose.y, self.current_pose.z))
+                self.tags_found.append(self.current_pose)
+                rospy.loginfo("I NOW HAVE {} UNIQUE TAGS IN MY LIST".format(len(self.tags_found)))
+
+                if len(self.tags_found) == self.max_num_tags:
+                    rospy.loginfo("I (SHOULD) HAVE FOUND ALL TAGS")
 
                 pub = rospy.Publisher('tags_found', Point, queue_size=10)
                 pub.publish(self.current_pose)
@@ -68,10 +94,9 @@ class Detection():
         ODOMETRY_TOPIC = rospy.get_param("~odometry_topic")
 
         try:
-            while not rospy.is_shutdown():
-                rospy.Subscriber(IMAGE_TOPIC, Image, self.processImage)
-                rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
-                rospy.spin()
+            rospy.Subscriber(IMAGE_TOPIC, Image, self.processImage)
+            rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
+            rospy.spin()
 
         finally:
             rospy.loginfo('Shutting down node...')
@@ -80,8 +105,11 @@ class Detection():
 def main():
     rospy.init_node('detectTags')
 
+    NUM_TAGS = rospy.get_param("~num_tags_in_maze")
+    SHOW_CAMERA =  rospy.get_param("~show_camera")
+
     try:
-        Detection()
+        Detection(NUM_TAGS, SHOW_CAMERA)
     except rospy.ROSInterruptException:
         pass
 
