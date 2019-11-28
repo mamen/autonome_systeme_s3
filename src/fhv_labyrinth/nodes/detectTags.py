@@ -21,10 +21,12 @@ class Detection:
     max_num_tags = -1
     tags_found = []
     show_cam = False
+    tags_color = None
 
-    def __init__(self, num_tags, show_cam):
+    def __init__(self, num_tags, show_cam, tags_color):
         self.max_num_tags = num_tags
         self.show_cam = show_cam
+        self.tags_color = tags_color
         self.detectTags()
 
     def setCurrentPose(self, data):
@@ -54,15 +56,13 @@ class Detection:
 
     def processImage(self, data):
 
-        COLOR = Color.RED
-
         LOWER_LIMIT = UPPER_LIMIT = np.array([0, 0, 0])
 
-        if COLOR == Color.RED:
+        if self.tags_color == Color.RED:
             LOWER_LIMIT = np.array([0, 50, 50])
             UPPER_LIMIT = np.array([10, 255, 255])
-        elif COLOR == Color.BLUE:
-            LOWER_LIMIT = np.array([30, 150, 50])
+        elif self.tags_color == Color.BLUE:
+            LOWER_LIMIT = np.array([20, 140, 40])
             UPPER_LIMIT = np.array([255, 255, 180])
 
         bridge = CvBridge()
@@ -75,7 +75,9 @@ class Detection:
             res = cv.bitwise_and(frame, frame, mask=mask)
 
             if self.show_cam:
-                cv.imshow('mask', frame)
+                cv.imshow('original', frame)
+                cv.imshow('mask', mask)
+                cv.imshow('res', res)
                 cv.waitKey(1)
 
             if cv.mean(res) > (4, 4, 4) and self.isNewTag(self.current_pose):
@@ -101,19 +103,32 @@ class Detection:
             rospy.Subscriber(IMAGE_TOPIC, Image, self.processImage)
             rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
             rospy.spin()
-
         finally:
             rospy.loginfo('Shutting down node...')
 
 
 def main():
-    rospy.init_node('detectTags')
-
-    NUM_TAGS = rospy.get_param("~num_tags_in_maze")
-    SHOW_CAMERA =  rospy.get_param("~show_camera")
 
     try:
-        Detection(NUM_TAGS, SHOW_CAMERA)
+
+        rospy.init_node('detectTags')
+
+        NUM_TAGS = rospy.get_param("~num_tags_in_maze")
+        SHOW_CAMERA = rospy.get_param("~show_camera")
+
+        color = rospy.get_param("~tags_color")
+
+        TAGS_COLOR = None
+
+        if color == "RED":
+            TAGS_COLOR = Color.RED
+        elif color == "BLUE":
+            TAGS_COLOR = Color.BLUE
+
+        if TAGS_COLOR is None:
+            raise Exception("Invalid argument tags_color.")
+
+        Detection(NUM_TAGS, SHOW_CAMERA, TAGS_COLOR)
     except rospy.ROSInterruptException:
         pass
 
