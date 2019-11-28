@@ -8,6 +8,8 @@ import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
 from enum import Enum
+from os.path import expanduser
+import time
 
 
 class Color(Enum):
@@ -62,7 +64,7 @@ class Detection:
             LOWER_LIMIT = np.array([0, 50, 50])
             UPPER_LIMIT = np.array([10, 255, 255])
         elif self.tags_color == Color.BLUE:
-            LOWER_LIMIT = np.array([20, 140, 40])
+            LOWER_LIMIT = np.array([10, 130, 30])
             UPPER_LIMIT = np.array([255, 255, 180])
 
         bridge = CvBridge()
@@ -87,12 +89,25 @@ class Detection:
 
                 if len(self.tags_found) == self.max_num_tags:
                     rospy.loginfo("I (SHOULD) HAVE FOUND ALL TAGS")
+                    self.saveTagsToDisk()
 
                 pub = rospy.Publisher('tags_found', Point, queue_size=10)
                 pub.publish(self.current_pose)
 
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
+
+    def saveTagsToDisk(self):
+        filename = "{}/tags_{}.txt".format(expanduser("~"), int(time.time()))
+
+        with open(filename, 'w') as f:
+            f.write("id;x;y;z\n")
+            i = 1
+            for tag in self.tags_found:
+                f.write("{};{};{};{}\n".format(i, tag.x, tag.y, tag.z))
+                i += 1
+
+        rospy.loginfo("STORED TAGS TO {}".format(filename))
 
     def detectTags(self):
 
