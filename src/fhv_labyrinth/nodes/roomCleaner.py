@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from numpy import array, reshape, where, floor, zeros_like
+from numpy import array, reshape, where, floor, zeros, indices, nan, unravel_index, nanargmin
 from nav_msgs.msg import OccupancyGrid, Odometry
 import cv2 as cv
 import numpy as np
@@ -14,6 +14,23 @@ class RoomCleaner(object):
         self.has_odom = False
         self.map_subscription = rospy.Subscriber(map_topic, OccupancyGrid, self.onMapChange)
         self.odom_subscription = rospy.Subscriber(odom_topic, Odometry, self.onOdomChange)
+
+    def fieldIndex2Coordinates(self, fieldIndex):
+        resolution = self.map_resolution # in cm
+        origin = array(self.map_origin) # (x, y) in m
+        pos = array(fieldIndex) # (x, y) in ??
+
+        robot_pos = pos * resolution + origin
+        return robot_pos
+
+    def coordinates2FieldIndex(self, coordinates):
+        resolution = self.map_resolution # in cm
+        origin = array(self.map_origin) # (x, y) in m
+        pos = array(coordinates) # (x, y) in ??
+
+        # position in occupancy grid (x, y)
+        robot_pos = ((pos - origin) / resolution).astype(int)
+        return robot_pos
 
     def onMapChange(self, map_msg):
         origin_pos = map_msg.info.origin.position
@@ -48,18 +65,11 @@ class RoomCleaner(object):
         if self.has_map:
             self.calc()
 
-    def calc(self):        
-        #dim = self.map_dim # (height, width)
-
-        resolution = self.map_resolution # in cm
-        origin = array(self.map_origin) # (x, y) in m
-        pos = array(self.odom_pos) # (x, y) in ??
-
-        # position in occupancy grid (x, y)
-        robot_pos = ((pos - origin) / resolution).astype(int)
+    def calc(self):
+        import pdb; pdb.set_trace()
+        robot_indexPos = self.coordinates2FieldIndex(self.odom_pos)
         
-        # currently visited field is not needed to be visited again
-        x, y = robot_pos
+        x, y = robot_indexPos
         self.fields_to_visit[x][y] = False
 
         # m
@@ -72,17 +82,17 @@ class RoomCleaner(object):
         
         self.fields_remaining = fields_visitable & self.fields_to_visit
 
-        # c
-        # True: field i wanna visit
-        # False: field i want to avoid
+        # find index of next field which is true
+        a, b = indices(self.map_dim)
+        c = ((a-x)**2+(b-y)**2)**0.5
+        c[self.fields_remaining==False] = nan
         
-        # 1
+        idx = unravel_index(nanargmin(c, axis=None), c.shape)
 
+        next_coordinates = self.fieldIndex2Coordinates(idx)
 
-
-        data = self.data
-
-        print(robot_pos)
+        print(idx, next_coordinates)
+        # TOOO: continue here with telling move base where to go next
 
 def run():
     map_topic = rospy.get_param("~map_topic")
