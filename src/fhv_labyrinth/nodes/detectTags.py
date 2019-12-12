@@ -14,7 +14,8 @@ import time
 
 class Color(Enum):
     RED = 1,
-    BLUE = 2
+    BLUE = 2,
+    GREEN = 3
 
 
 class Detection:
@@ -64,9 +65,11 @@ class Detection:
             LOWER_LIMIT = np.array([0, 50, 50])
             UPPER_LIMIT = np.array([10, 255, 255])
         elif self.tags_color == Color.BLUE:
-            LOWER_LIMIT = np.array([10, 130, 30])
-            UPPER_LIMIT = np.array([255, 255, 180])
-
+            LOWER_LIMIT = np.array([100,150,0])
+            UPPER_LIMIT = np.array([140,255,255])
+        elif self.tags_color == Color.GREEN:
+            LOWER_LIMIT = np.array([60, 10, 10])
+            UPPER_LIMIT = np.array([80, 255, 255])
         bridge = CvBridge()
 
         try:
@@ -139,9 +142,18 @@ def main():
             TAGS_COLOR = Color.RED
         elif color == "BLUE":
             TAGS_COLOR = Color.BLUE
+        elif color == "GREEN":
+            TAGS_COLOR = Color.GREEN
 
         if TAGS_COLOR is None:
             raise Exception("Invalid argument tags_color.")
+
+        rospy.loginfo('############ PARAMS ############')
+        rospy.loginfo('# NUM_TAGS: \t{0}'.format(NUM_TAGS))
+        rospy.loginfo('# SHOW_CAMERA: \t{0}'.format(SHOW_CAMERA))
+        rospy.loginfo('# TAGS_COLOR: \t{0}'.format(TAGS_COLOR))
+
+
 
         Detection(NUM_TAGS, SHOW_CAMERA, TAGS_COLOR)
     except rospy.ROSInterruptException:
