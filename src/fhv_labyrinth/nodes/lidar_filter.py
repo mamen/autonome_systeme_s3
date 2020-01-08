@@ -2,11 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import LaserScan
-import cv2 as cv
-from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
-import time
-from os.path import expanduser
 
 
 class Scan:
@@ -52,7 +48,7 @@ class Scan:
 
     def processScan(self, data):
 
-        data.ranges = self.filter(data.ranges, 2)
+        data.ranges = self.filter(data.ranges, 3)
 
         print("published new data")
         pub = rospy.Publisher('/scan/filtered', LaserScan, queue_size=100)
