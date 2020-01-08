@@ -70,6 +70,7 @@ class Detection:
         elif self.tags_color == Color.GREEN:
             LOWER_LIMIT = np.array([60, 10, 10])
             UPPER_LIMIT = np.array([80, 255, 255])
+
         bridge = CvBridge()
 
         try:

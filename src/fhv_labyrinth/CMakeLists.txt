@@ -166,6 +166,7 @@ catkin_install_python(PROGRAMS
     nodes/detectTags.py
     nodes/manageTags.py
     nodes/roomCleaner.py
+    nodes/lidar_filter.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
