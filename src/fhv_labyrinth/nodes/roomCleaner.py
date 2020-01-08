@@ -1,36 +1,34 @@
 #!/usr/bin/env python
 
 import rospy
-from numpy import array, reshape, where, floor, zeros, indices, nan, unravel_index, nanargmin
-from nav_msgs.msg import OccupancyGrid, Odometry
-import cv2 as cv
 import numpy as np
-from cv2 import imshow, waitKey
+from nav_msgs.msg import OccupancyGrid, Odometry
 from time import sleep
 
 class RoomCleaner(object):
-    def __init__(self, map_topic, odom_topic):
+    def __init__(self, rate, map_topic, odom_topic):
         self.has_map = False
         self.has_odom = False
+        self.rate = rate
         self.map_subscription = rospy.Subscriber(map_topic, OccupancyGrid, self.onMapChange)
         self.odom_subscription = rospy.Subscriber(odom_topic, Odometry, self.onOdomChange)
 
     def fieldIndex2Coordinates(self, fieldIndex):
         resolution = self.map_resolution # in cm
-        origin = array(self.map_origin) # (x, y) in m
-        pos = array(fieldIndex) # (x, y) in ??
+        origin = np.array(self.map_origin) # (x, y) in m
+        fi = np.array(fieldIndex) # (x, y) in ??
 
-        robot_pos = pos * resolution + origin
-        return robot_pos
+        co = fi * resolution + origin
+        return co
 
     def coordinates2FieldIndex(self, coordinates):
         resolution = self.map_resolution # in cm
-        origin = array(self.map_origin) # (x, y) in m
-        pos = array(coordinates) # (x, y) in ??
+        origin = np.array(self.map_origin) # (x, y) in m
+        co = np.array(coordinates) # (x, y) in ??
 
         # position in occupancy grid (x, y)
-        robot_pos = ((pos - origin) / resolution).astype(int)
-        return robot_pos
+        fi = ((co - origin) / resolution).astype(int)
+        return fi
 
     def onMapChange(self, map_msg):
         origin_pos = map_msg.info.origin.position
@@ -41,16 +39,12 @@ class RoomCleaner(object):
         self.map_origin = (origin_pos.x, origin_pos.y)
         
         # update data
-        self.map_data = array(map_msg.data).reshape(self.map_dim)
+        self.map_data = np.array(map_msg.data).reshape(self.map_dim)
 
         # initially you want to visit all fields whether they are reachable or not
         if not self.has_map:
-            self.fields_to_visit = zeros(self.map_dim)==0
+            self.fields_to_visit = np.zeros(self.map_dim)==0
             self.has_map = True
-        
-        # run calculations with new updated value
-        if self.has_odom:
-            self.calc()
 
     def onOdomChange(self, odom_msg):
         odom_pos = odom_msg.pose.pose.position
@@ -60,15 +54,10 @@ class RoomCleaner(object):
         
         if not self.has_odom:
             self.has_odom = True
-        
-        # run calculations with new updated value
-        if self.has_map:
-            self.calc()
 
     def calc(self):
-        import pdb; pdb.set_trace()
         robot_indexPos = self.coordinates2FieldIndex(self.odom_pos)
-        
+
         x, y = robot_indexPos
         self.fields_to_visit[x][y] = False
 
@@ -80,32 +69,33 @@ class RoomCleaner(object):
         # 384x384 field -> (-1=undiscovered, 0=free, 100=occupied)
         fields_visitable = self.map_data==0 # actually 1-99 would work too
         
-        self.fields_remaining = fields_visitable & self.fields_to_visit
+        fields_remaining = fields_visitable & self.fields_to_visit
 
         # find index of next field which is true
-        a, b = indices(self.map_dim)
+        a, b = np.indices(self.map_dim)
         c = ((a-x)**2+(b-y)**2)**0.5
-        c[self.fields_remaining==False] = nan
+        c[fields_remaining==False] = np.nan
         
-        idx = unravel_index(nanargmin(c, axis=None), c.shape)
+        idx = np.unravel_index(np.nanargmin(c, axis=None), c.shape)
 
         next_coordinates = self.fieldIndex2Coordinates(idx)
 
-        print(idx, next_coordinates)
-        # TOOO: continue here with telling move base where to go next
+        return next_coordinates
+
+    def run(self):
+        r = rospy.Rate(self.rate)
+        while not rospy.is_shutdown():
+            computed = self.calc()
+            # self.pub.publish(computed)
+            r.sleep()
+
 
 def run():
+    rate = rospy.get_param("~rate")
     map_topic = rospy.get_param("~map_topic")
     odom_topic = rospy.get_param("~odom_topic")
-    room_cleaner = RoomCleaner(map_topic, odom_topic)
-    rospy.spin()
-    # pub = rospy.Publisher('detectTags', TagDetected, queue_size=10)
-    #IMAGE_TOPIC = rospy.get_param("~img_topic")
-    
-    #while not rospy.is_shutdown():
-        # rospy.loginfo(text)
-    #    sleep(1)
-
+    room_cleaner = RoomCleaner(rate, map_topic, odom_topic)
+    room_cleaner.run()
 
 def main():
     rospy.init_node('room_cleaner')
@@ -118,18 +108,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-'''
-from numpy import array, zeros
-dim = (3,3) # dimensions of map
-c = zeros(dim)==0 # current fields to visit
-m = array([[ -1,   0, 100],
-       [ -1,   0,   4],
-       [ -1, 100, 100]]) # current map data
-p = (array([1]), array([2])) # current position in map
-
-...
-
-c[p] = False # mark current field as visited
-(m==0) & c # fields to visit next (true: to visit)
-'''
