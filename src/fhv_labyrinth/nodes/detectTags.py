@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import rospy
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import Point
 import cv2 as cv
@@ -21,10 +21,7 @@ class Color(Enum):
 class Detection:
 
     current_pose = Point(0, 0, 0)
-    max_num_tags = -1
     tags_found = []
-    show_cam = False
-    tags_color = None
 
     def __init__(self, num_tags, show_cam, tags_color):
         self.max_num_tags = num_tags
@@ -51,43 +48,107 @@ class Detection:
             else:
                 rospy.loginfo(distance)
 
-
         return True
 
     def calcDistance(self, t1, t2):
         return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
 
-    def processImage(self, data):
-
+    def maskImage(self, image):
         LOWER_LIMIT = UPPER_LIMIT = np.array([0, 0, 0])
 
         if self.tags_color == Color.RED:
             LOWER_LIMIT = np.array([0, 50, 50])
             UPPER_LIMIT = np.array([10, 255, 255])
         elif self.tags_color == Color.BLUE:
-            LOWER_LIMIT = np.array([100,150,0])
-            UPPER_LIMIT = np.array([140,255,255])
+            LOWER_LIMIT = np.array([100, 150, 0])
+            UPPER_LIMIT = np.array([140, 255, 255])
         elif self.tags_color == Color.GREEN:
+            ## vormittag:
+            # LOWER_LIMIT = np.array([80, 0, 0])
+            # UPPER_LIMIT = np.array([110, 200, 130])
+            ## nachmittag:
             LOWER_LIMIT = np.array([60, 10, 10])
             UPPER_LIMIT = np.array([80, 255, 255])
 
-        bridge = CvBridge()
+        try:
+            hsv = cv.cvtColor(image, cv.COLOR_BGR2HSV)
+            return cv.inRange(hsv, LOWER_LIMIT, UPPER_LIMIT)
+        except Exception as e:
+            rospy.logerr(e)
+
+        return None
+
+    def processImageRaspi(self, data):
 
         try:
-            frame = bridge.imgmsg_to_cv2(data, "passthrough")
+            np_arr = np.fromstring(data.data, np.uint8)
+            frame = cv.imdecode(np_arr, cv.IMREAD_COLOR)
 
-            hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
-            mask = cv.inRange(hsv, LOWER_LIMIT, UPPER_LIMIT)
-            res = cv.bitwise_and(frame, frame, mask=mask)
+            res = self.maskImage(frame)
+
+            params = cv.SimpleBlobDetector_Params()
+
+            params.filterByColor = True
+            params.blobColor = 0
+
+            # Filter by Area
+            params.filterByArea = True
+            params.minArea = 800
+            params.maxArea = 10000
+
+            params.filterByCircularity = False
+            params.filterByConvexity = False
+            params.filterByInertia = False
+
+            detector = cv.SimpleBlobDetector_create(params)
+
+            ret, mask = cv.threshold(res, 127, 255, cv.THRESH_BINARY_INV)
+
+            # Detect blobs.
+            keypoints = detector.detect(mask)
+
+            if len(keypoints) > 0:
+                biggest = sorted(keypoints, key=lambda x: x.size, reverse=True)[0]
+
+                THRESHOLD = 20
+
+                offset = biggest.pt[0] - (res.shape[1] / 2)
+
+                print("robot is off by {}".format(offset))
+
+                if offset > THRESHOLD:
+                    print("move robot to the RIGHT")
+                elif offset < -THRESHOLD:
+                    print("move robot to the LEFT")
+                else:
+                    print("GO STRAIGT AHEAD")
+
+            im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             if self.show_cam:
-                cv.imshow('original', frame)
-                cv.imshow('mask', mask)
-                cv.imshow('res', res)
+                cv.imshow('raspi orig', frame)
+                cv.imshow("Keypoints", im_with_keypoints)
+                cv.waitKey(1)
+
+        except CvBridgeError as e:
+            rospy.logerr("CvBridge Error: {0}".format(e))
+
+    def processImagePixy(self, data):
+        print("Pixy")
+        try:
+            np_arr = np.fromstring(data.data, np.uint8)
+            frame = cv.imdecode(np_arr, cv.IMREAD_COLOR)
+
+            res = self.maskImage(frame)
+
+            if self.show_cam:
+                cv.imshow('pixy orig', frame)
+                cv.imshow('pixy res', res)
                 cv.waitKey(1)
 
             if cv.mean(res) > (4, 4, 4) and self.isNewTag(self.current_pose):
-                rospy.loginfo("NEW TAG FOUND @ x: {} y: {} z: {}".format(self.current_pose.x, self.current_pose.y, self.current_pose.z))
+                rospy.loginfo("NEW TAG FOUND @ x: {} y: {} z: {}".format(self.current_pose.x, self.current_pose.y,
+                                                                         self.current_pose.z))
                 self.tags_found.append(self.current_pose)
                 rospy.loginfo("I NOW HAVE {} UNIQUE TAGS IN MY LIST".format(len(self.tags_found)))
 
@@ -98,8 +159,8 @@ class Detection:
                 pub = rospy.Publisher('tags_found', Point, queue_size=10)
                 pub.publish(self.current_pose)
 
-        except CvBridgeError as e:
-            rospy.logerr("CvBridge Error: {0}".format(e))
+        except Exception as e:
+            rospy.logerr(e)
 
     def saveTagsToDisk(self):
         filename = "{}/tags_{}.txt".format(expanduser("~"), int(time.time()))
@@ -115,13 +176,19 @@ class Detection:
 
     def detectTags(self):
 
-        IMAGE_TOPIC = rospy.get_param("~image_topic")
+        RASPI_CAM__TOPIC = rospy.get_param("~image_topic_raspi_cam")
+        PIXY_CAM_TOPIC = rospy.get_param("~image_topic_pixy_cam")
         ODOMETRY_TOPIC = rospy.get_param("~odometry_topic")
 
         try:
-            rospy.Subscriber(IMAGE_TOPIC, Image, self.processImage)
+            rospy.loginfo("waiting for camera image")
+            rospy.Subscriber(RASPI_CAM__TOPIC, CompressedImage, self.processImageRaspi)
+            # rospy.Subscriber(PIXY_CAM_TOPIC, CompressedImage, self.processImagePixy)
             rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
+
             rospy.spin()
+        except Exception as e:
+            rospy.logerr(e)
         finally:
             rospy.loginfo('Shutting down node...')
 
@@ -153,8 +220,6 @@ def main():
         rospy.loginfo('# NUM_TAGS: \t{0}'.format(NUM_TAGS))
         rospy.loginfo('# SHOW_CAMERA: \t{0}'.format(SHOW_CAMERA))
         rospy.loginfo('# TAGS_COLOR: \t{0}'.format(TAGS_COLOR))
-
-
 
         Detection(NUM_TAGS, SHOW_CAMERA, TAGS_COLOR)
     except rospy.ROSInterruptException:
