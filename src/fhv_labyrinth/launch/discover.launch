@@ -11,20 +11,6 @@
     <arg name="open_rviz" value="false" />
   </include>
 
-  <!-- Pessimistic Mapping -->
-  <group>
-    <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" output="screen">
-      <param name="rate" value="5" />
-      <param name="size" value="5" />
-      <param name="map_topic" value="map" />
-      <param name="odom_topic" value="odom" />
-      <param name="pessimistic_topic" value="pessimistic" />
-    </node>
-  </group>
-
-  <!-- Map Persistence -->
-  <!-- rosrun map_server map_saver -f ~/map_filename -->
-
   <!-- Movement -->
   <group>
     <!-- Arguments -->
@@ -45,6 +31,17 @@
       <remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
       <remap from="odom" to="$(arg odom_topic)"/>
       <param name="DWAPlannerROS/min_vel_x" value="0.0" if="$(arg move_forward_only)" />
+    </node>
+  </group>
+
+  <!-- Pessimistic Mapping -->
+  <group>
+    <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" output="screen">
+      <param name="rate" value="5" />
+      <param name="size" value="10" />
+      <param name="map_topic" value="map" />
+      <param name="odom_topic" value="odom" />
+      <param name="pessimistic_topic" value="pessimistic" />
     </node>
   </group>
 
