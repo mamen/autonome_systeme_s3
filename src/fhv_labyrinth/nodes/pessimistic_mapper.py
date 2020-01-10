@@ -12,9 +12,7 @@ The gmapping node does the mapping rather quickly, but we want it to slow it dow
 
 import rospy
 
-from nav_msgs.msg import OccupancyGrid, Odometry, MapMetaData
-from std_msgs.msg import String, Header
-from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance
+from nav_msgs.msg import OccupancyGrid, Odometry
 
 import numpy as np
 
