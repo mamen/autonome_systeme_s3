@@ -11,23 +11,26 @@ The gmapping node does the mapping rather quickly, but we want it to slow it dow
 '''
 
 import rospy
+import tf
 
 from nav_msgs.msg import OccupancyGrid, Odometry
 
 import numpy as np
 
+from pessimistic_mask import createPessimisticMask
 
 class PessimisticMapper(object):
     '''
     Don't use mapped areas which you haven't seen on your own.
     '''
 
-    def __init__(self, size, map_topic, odom_topic, pessimistic_topic):
+    def __init__(self, map_topic, odom_topic, pessimistic_topic, sight_distance, sight_width):
         self.map_msg = None
         self.odom_msg = None
         self.pessimistic_map = None
 
-        self.size = size
+        self.sight_distance = sight_distance
+        self.sight_width = sight_width
 
         self.map_sub = rospy.Subscriber(map_topic, OccupancyGrid, self.onMapMessage)
         self.odom_sub = rospy.Subscriber(odom_topic, Odometry, self.onOdomMessage)
@@ -86,20 +89,24 @@ class PessimisticMapper(object):
         pos_xy = np.array((self.odom_msg.pose.pose.position.x, self.odom_msg.pose.pose.position.y))
         origin_xy = np.array((self.map_msg.info.origin.position.x, self.map_msg.info.origin.position.y))
         
+        orientation = self.odom_msg.pose.pose.orientation
+        roll, pitch, yaw = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+
         height = self.map_msg.info.height
         width = self.map_msg.info.width
         resolution = self.map_msg.info.resolution
 
         idx_x, idx_y = ((pos_xy - origin_xy) / resolution).astype(int)
-        rospy.loginfo('x: {}, y: {}'.format(idx_x, idx_y))
-        
-        safe_idx_x_low = max(idx_x - self.size / 2, 0)
-        safe_idx_y_low = max(idx_y - self.size / 2, 0)
-        safe_idx_x_high = min(idx_x + 1 + self.size / 2, height)
-        safe_idx_y_high = min(idx_y + 1 + self.size / 2, width)
 
-        # mark position of robot as visited (can be shown in published map now)
-        self.pessimistic_map[safe_idx_y_low:safe_idx_y_high, safe_idx_x_low:safe_idx_x_high] = False
+        dimension = (width, height)
+        pos = (idx_x, idx_y)
+
+        # rospy.loginfo('x: {}, y: {}, yaw: {}'.format(idx_x, idx_y, yaw))
+
+        mask = createPessimisticMask(dimension, self.sight_distance, self.sight_width, pos, yaw)
+
+        # mark visible area at current pose as visited (can be shown in published map now)
+        self.pessimistic_map[mask==1] = False
 
         # bring data in shape
         pessimistic = np.array(self.map_msg.data).reshape((height, width))
@@ -119,13 +126,14 @@ def main():
     try:
         rospy.init_node('pessimistic_mapper', anonymous=True)
 
-        size = rospy.get_param('~size', default=3)
         map_topic = rospy.get_param('~map_topic', default='map')
         odom_topic = rospy.get_param('~odom_topic', default='odom')
         pessimistic_topic = rospy.get_param('~pessimistic_topic', default='pessimistic')
+        sight_distance = rospy.get_param('~sight_distance', default=50)
+        sight_width = rospy.get_param('~sight_width', default=30)
         rate = rospy.get_param('~rate', default=1)
 
-        pm = PessimisticMapper(size, map_topic, odom_topic, pessimistic_topic)
+        pm = PessimisticMapper(map_topic, odom_topic, pessimistic_topic, sight_distance, sight_width)
         pm.spin(rate)
 
     except rospy.ROSInterruptException:
