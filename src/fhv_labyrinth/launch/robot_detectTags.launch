@@ -4,8 +4,7 @@
   <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
 
   <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
-      <param name="image_topic_raspi_cam" value="/raspicam_node/image/compressed" />
-      <param name="image_topic_pixy_cam" value="/image_raw/compressed" />
+      <param name="image_topic" value="/raspicam_node/image/compressed" />
       <param name="odometry_topic" value="odom" />
       <param name="num_tags_in_maze" value="5" />
       <param name="show_camera" value="True" />
