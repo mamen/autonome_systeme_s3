@@ -29,6 +29,8 @@ class Detection:
 
     LIN_VEL_STEP_SIZE = 0.4
     ANG_VEL_STEP_SIZE = 0.3
+    time_movement_started = 0
+    last_blob_y_position = 0
 
     current_pose = Point(0, 0, 0)
     tags_found = []
@@ -45,8 +47,6 @@ class Detection:
             input = low
         elif input > high:
             input = high
-        else:
-            input = input
 
         return input
 
@@ -58,23 +58,19 @@ class Detection:
 
     def makeSimpleProfile(self, output, input, slop):
         if input > output:
-            output = min(input, output + slop)
+            return min(input, output + slop)
         elif input < output:
-            output = max(input, output - slop)
+            return max(input, output - slop)
         else:
-            output = input
-
-        return output
+            return input
 
     def setCurrentPose(self, data):
-
         try:
             self.current_pose = data.pose.pose.position
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
     def isNewTag(self, newTag):
-
         if len(self.tags_found) == 0:
             return True
 
@@ -180,9 +176,6 @@ class Detection:
 
         # Detect blobs.
         return detector.detect(mask), mask
-
-    time_movement_started = 0
-    last_blob_y_position = 0
 
     def getBiggestBlog(self, keypoints):
         return sorted(keypoints, key=lambda x: x.size, reverse=True)[0]
@@ -326,7 +319,6 @@ class Detection:
             rospy.logerr(e)
         finally:
             rospy.loginfo('Shutting down node...')
-
 
 def main():
 
