@@ -14,6 +14,7 @@ import rospy
 import tf
 
 from nav_msgs.msg import OccupancyGrid, Odometry
+from sensor_msgs.msg import LaserScan
 
 import numpy as np
 
@@ -24,16 +25,17 @@ class PessimisticMapper(object):
     Don't use mapped areas which you haven't seen on your own.
     '''
 
-    def __init__(self, map_topic, odom_topic, pessimistic_topic, sight_distance, sight_width):
+    def __init__(self, map_topic, odom_topic, scan_topic, pessimistic_topic, sight_distance, sight_width):
         self.map_msg = None
         self.odom_msg = None
+        self.scan_msg = None
         self.pessimistic_map = None
 
-        self.sight_distance = sight_distance
-        self.sight_width = sight_width
+        self.view = (sight_distance, sight_width)
 
         self.map_sub = rospy.Subscriber(map_topic, OccupancyGrid, self.onMapMessage)
         self.odom_sub = rospy.Subscriber(odom_topic, Odometry, self.onOdomMessage)
+        self.scan_sub = rospy.Subscriber(scan_topic, LaserScan, self.onScanMessage)
 
         self.pub = rospy.Publisher(pessimistic_topic, OccupancyGrid, queue_size=10, latch=True)
 
@@ -58,7 +60,6 @@ class PessimisticMapper(object):
             dimension = (self.map_msg.info.height, self.map_msg.info.width)
             self.pessimistic_map = np.ones(dimension).astype(bool)
         
-
     def onOdomMessage(self, msg):
         '''
         Callback receiving an Odometry Message.
@@ -77,39 +78,26 @@ class PessimisticMapper(object):
         '''
         self.odom_msg = msg
 
+    def onScanMessage(self, msg):
+        self.scan_msg = msg
+
     def spin(self, rate):
         r = rospy.Rate(rate)
         while not rospy.is_shutdown():
-            if self.odom_msg and self.map_msg:
+            if self.map_msg and self.odom_msg and self.scan_msg:
                 computed = self.compute()
                 self.pub.publish(computed)
             r.sleep()
 
     def compute(self):
-        pos_xy = np.array((self.odom_msg.pose.pose.position.x, self.odom_msg.pose.pose.position.y))
-        origin_xy = np.array((self.map_msg.info.origin.position.x, self.map_msg.info.origin.position.y))
-        
-        orientation = self.odom_msg.pose.pose.orientation
-        roll, pitch, yaw = tf.transformations.euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
-
-        height = self.map_msg.info.height
-        width = self.map_msg.info.width
-        resolution = self.map_msg.info.resolution
-
-        idx_x, idx_y = ((pos_xy - origin_xy) / resolution).astype(int)
-
-        dimension = (width, height)
-        pos = (idx_x, idx_y)
-
-        # rospy.loginfo('x: {}, y: {}, yaw: {}'.format(idx_x, idx_y, yaw))
-
-        mask = createPessimisticMask(dimension, self.sight_distance, self.sight_width, pos, yaw)
-
         # mark visible area at current pose as visited (can be shown in published map now)
-        self.pessimistic_map[mask==1] = False
+        mask = createPessimisticMask(self.map_msg, self.odom_msg, self.scan_msg, self.view)
+        self.pessimistic_map[mask==True] = False
+
+        _info = self.map_msg.info
 
         # bring data in shape
-        pessimistic = np.array(self.map_msg.data).reshape((height, width))
+        pessimistic = np.array(self.map_msg.data).reshape((_info.width, _info.height))
         # mark pessimistic fields as Unknown
         pessimistic[self.pessimistic_map==True] = -1
         # turn back into one dimensional array again
@@ -117,7 +105,7 @@ class PessimisticMapper(object):
         
         pessimistic_msg = OccupancyGrid()
         pessimistic_msg.header = self.map_msg.header
-        pessimistic_msg.info = self.map_msg.info
+        pessimistic_msg.info = _info
         pessimistic_msg.data = pessimistic
         return pessimistic_msg
 
@@ -128,12 +116,13 @@ def main():
 
         map_topic = rospy.get_param('~map_topic', default='map')
         odom_topic = rospy.get_param('~odom_topic', default='odom')
+        scan_topic = rospy.get_param('~scan_topic', default='scan')
         pessimistic_topic = rospy.get_param('~pessimistic_topic', default='pessimistic')
         sight_distance = rospy.get_param('~sight_distance', default=50)
         sight_width = rospy.get_param('~sight_width', default=30)
         rate = rospy.get_param('~rate', default=1)
 
-        pm = PessimisticMapper(map_topic, odom_topic, pessimistic_topic, sight_distance, sight_width)
+        pm = PessimisticMapper(map_topic, odom_topic, scan_topic, pessimistic_topic, sight_distance, sight_width)
         pm.spin(rate)
 
     except rospy.ROSInterruptException:

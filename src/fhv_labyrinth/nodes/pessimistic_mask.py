@@ -1,43 +1,73 @@
 from PIL import Image,ImageDraw
 import numpy as np
+import tf
 
 pi = np.pi
+inf = np.inf
 dot = np.dot
 sin = np.sin
 cos = np.cos
 ar = np.array
 arange = np.arange
-rad = lambda ang: ang*pi/180
 
 def Rotate2D(pts,cnt,ang=pi/4):
     return dot(pts-cnt,ar([[cos(ang),sin(ang)],[-sin(ang),cos(ang)]]))+cnt
 
-def createPessimisticMask(dimension, sight_distance, sight_width, pos, yaw):
+def triangleMask(center, view):
+    view_distance, view_width = view
+
     # isosceles triangle facing up
-    p1x, p1y = p1 = pos
-    p2 = p1x - sight_width / 2, p1y - sight_distance
-    p3 = p1x + sight_width / 2, p1y - sight_distance
+    p1x, p1y = p1 = center
+    p2 = p1x - view_width / 2, p1y - view_distance
+    p3 = p1x + view_width / 2, p1y - view_distance
 
     pts = ar((p1, p2, p3))
-    cnt = p1
+    return pts
+
+def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
+    # use odom_msg
+    _pose = odom_msg.pose.pose
+    pos_xy = ar((_pose.position.x, _pose.position.y))
+    roll, pitch, yaw = tf.transformations.euler_from_quaternion([_pose.orientation.x, _pose.orientation.y, _pose.orientation.z, _pose.orientation.w])
+
+    # use map_msg
+    _info = map_msg.info
+    origin_xy = ar((_info.origin.position.x, _info.origin.position.y))
+    height = _info.height
+    width = _info.width
+    resolution = _info.resolution
+
+    # use scan_msg
+    _scan = scan_msg
+    ranges = ar(_scan.ranges)
+    angles = arange(_scan.angle_min, _scan.angle_max + _scan.angle_increment / 2, _scan.angle_increment)
+    
+    # use view
+    # min_distance, max_distance, min_width, max_width = view
+    # view_distance, view_width = view
+    
+    #**************************************************************************
+    
+    dimension = (width, height)
+    center = ((pos_xy - origin_xy) / resolution).astype(int)
     ang = yaw + pi / 2
 
-    q1, q2, q3 = tuple(map(tuple, Rotate2D(pts,cnt,ang=ang).astype(int)))
-
-    # draw it
+    # create view_mask
+    pts = triangleMask(center, view)
+    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=ang).astype(int)))
     im = Image.new('L', dimension, 0)
-    ImageDraw.Draw(im).polygon([q1, q2, q3], fill=1, outline=1)
+    ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)
+    view_mask = ar(im)
 
-    mask = ar(im)
-    return mask
+    # create map_mask
+    ranges[ranges==inf] = 0 # substitute infinity with 0
+    xs = ranges * cos(angles)
+    ys = ranges * sin(angles)
+    pts = (ar((xs, ys)).T / resolution + center).astype(int)
+    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=ang).astype(int)))
+    im = Image.new('L', dimension, 0)
+    ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)
+    map_mask = ar(im)
 
-if __name__ == "__main__":
-    dimension = (10, 10)
-    pos = (4, 4)
-    sight_distance = 7
-    sight_width = 4
-    yaw = pi * 1 / 8
-
-    mask = createPessimisticMask(dimension, sight_distance, sight_width, pos, yaw)
-
-    print(mask)
+    mask = view_mask * map_mask
+    return mask == 1
