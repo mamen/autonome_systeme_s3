@@ -25,19 +25,12 @@ class Color(Enum):
     GREEN = 3
 
 
-#
-#   1. detect tag
-#   2. center robot to tag
-#   3. drive to tag
-#   4. tag reached:
-#       - store tag
-#   5. goto 1
-#
-
 class Detection:
 
-    LIN_VEL_STEP_SIZE = 0.2
-    ANG_VEL_STEP_SIZE = 0.15
+    LIN_VEL_STEP_SIZE = 0.4
+    ANG_VEL_STEP_SIZE = 0.3
+    time_movement_started = 0
+    last_blob_y_position = 0
 
     current_pose = Point(0, 0, 0)
     tags_found = []
@@ -54,8 +47,6 @@ class Detection:
             input = low
         elif input > high:
             input = high
-        else:
-            input = input
 
         return input
 
@@ -67,23 +58,19 @@ class Detection:
 
     def makeSimpleProfile(self, output, input, slop):
         if input > output:
-            output = min(input, output + slop)
+            return min(input, output + slop)
         elif input < output:
-            output = max(input, output - slop)
+            return max(input, output - slop)
         else:
-            output = input
-
-        return output
+            return input
 
     def setCurrentPose(self, data):
-
         try:
             self.current_pose = data.pose.pose.position
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
     def isNewTag(self, newTag):
-
         if len(self.tags_found) == 0:
             return True
 
@@ -190,9 +177,6 @@ class Detection:
         # Detect blobs.
         return detector.detect(mask), mask
 
-    time_movement_started = 0
-    last_blob_y_position = 0
-
     def getBiggestBlog(self, keypoints):
         return sorted(keypoints, key=lambda x: x.size, reverse=True)[0]
 
@@ -211,9 +195,9 @@ class Detection:
             maskedImage = self.maskImage(frame)
             keypoints, mask = self.detectBlobs(maskedImage)
 
-            THRESHOLD = 100
+            THRESHOLD = 50
 
-            SECONDS_TO_TAG = 2.1
+            SECONDS_TO_TAG = 1.4
 
             current_tag = None
 
@@ -221,7 +205,7 @@ class Detection:
             im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             if self.show_cam:
-                cv.imshow('raspi orig', frame)
+                # cv.imshow('raspi orig', frame)
                 cv.imshow("Keypoints", im_with_keypoints)
                 cv.waitKey(1)
             # -------------------------------------------
@@ -335,7 +319,6 @@ class Detection:
             rospy.logerr(e)
         finally:
             rospy.loginfo('Shutting down node...')
-
 
 def main():
 
