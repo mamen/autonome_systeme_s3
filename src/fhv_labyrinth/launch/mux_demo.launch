@@ -1,0 +1,22 @@
+<launch>
+  <arg name="namespace" value="demo" />
+  <arg name="consumer" value="cons" />
+  <arg name="producer1" value="prod_1" />
+  <arg name="producer2" value="prod_2" />
+  <group ns="$(arg namespace)">
+    <node pkg="fhv_labyrinth" type="consumer.py" respawn="false" name="consumer" output="screen">
+      <param name="data_topic" value="$(arg consumer)"/>
+      <param name="mux_topic" value="mux/selected"/>
+    </node>
+    <node pkg="fhv_labyrinth" type="producer_1.py" respawn="false" name="producer_1" output="screen">
+      <param name="topic" value="$(arg producer1)"/>
+      <param name="rate" value="1"/>
+    </node>
+    <node pkg="fhv_labyrinth" type="producer_2.py" respawn="false" name="producer_2" output="screen">
+      <param name="topic" value="$(arg producer2)"/>
+      <param name="rate" value="1"/>
+    </node>
+    <node pkg="fhv_labyrinth" type="mux_controller.py" respawn="false" name="mux_controller" output="screen" />
+    <node pkg="topic_tools" type="mux" respawn="false" name="mux" output="screen" args="$(arg consumer) $(arg producer1) $(arg producer2)" />
+  </group>
+</launch>
