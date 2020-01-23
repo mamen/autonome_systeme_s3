@@ -13,6 +13,24 @@ arange = np.arange
 def Rotate2D(pts,cnt,ang=pi/4):
     return dot(pts-cnt,ar([[cos(ang),sin(ang)],[-sin(ang),cos(ang)]]))+cnt
 
+def trapezeMask(center, view):
+    (d_min, d_max), (w_min, w_max) = view
+
+    # isosceles triangle facing up
+    cx, cy = center
+
+    # top left
+    p1 = cx - w_max, cy - d_max
+    # top right
+    p2 = cx + w_max, cy - d_max
+    # bottom right
+    p3 = cx + w_min, cy - d_min
+    # bottom left
+    p4 = cx - w_min, cy - d_min
+
+    pts = ar((p1, p2, p3, p4))
+    return pts
+
 def triangleMask(center, view):
     view_distance, view_width = view
 
@@ -53,7 +71,7 @@ def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
     ang = yaw + pi / 2
 
     # create view_mask
-    pts = triangleMask(center, view)
+    pts = trapezeMask(center, view)
     pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=ang).astype(int)))
     im = Image.new('L', dimension, 0)
     ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)

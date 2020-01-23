@@ -118,11 +118,13 @@ def main():
         odom_topic = rospy.get_param('~odom_topic', default='odom')
         scan_topic = rospy.get_param('~scan_topic', default='scan')
         pessimistic_topic = rospy.get_param('~pessimistic_topic', default='pessimistic')
-        sight_distance = rospy.get_param('~sight_distance', default=50)
-        sight_width = rospy.get_param('~sight_width', default=30)
+        sight_distance_min = rospy.get_param('~sight_distance_min', default=6)
+        sight_distance_max = rospy.get_param('~sight_distance_max', default=20)
+        sight_width_min = rospy.get_param('~sight_width_min', default=2)
+        sight_width_max = rospy.get_param('~sight_width', default=15)
         rate = rospy.get_param('~rate', default=1)
 
-        pm = PessimisticMapper(map_topic, odom_topic, scan_topic, pessimistic_topic, sight_distance, sight_width)
+        pm = PessimisticMapper(map_topic, odom_topic, scan_topic, pessimistic_topic, (sight_distance_min, sight_distance_max), (sight_width_min, sight_width_max))
         pm.spin(rate)
 
     except rospy.ROSInterruptException:

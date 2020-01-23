@@ -90,9 +90,11 @@
       <param name="map_topic" value="map" />
       <param name="odom_topic" value="odom" />
       <param name="pessimistic_topic" value="pessimistic" />
-      <param name="rate" value="3" />
-      <param name="sight_distance" value="50" />
-      <param name="sight_width" value="30" />
+      <param name="rate" value="5" />
+      <param name="sight_distance_min" value="6" />
+      <param name="sight_distance_max" value="20" />
+      <param name="sight_width_min" value="2" />
+      <param name="sight_width_max" value="15" />
     </node>
   </group>
 
