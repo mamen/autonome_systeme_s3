@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -11,7 +11,6 @@ from enum import Enum
 from os.path import expanduser
 import time
 from geometry_msgs.msg import Twist
-import tf
 
 class State(Enum):
     SEARCHING = 1,
@@ -28,9 +27,9 @@ class Color(Enum):
 
 class Detection:
 
-    LIN_VEL_STEP_SIZE = 0.1
-    ANG_VEL_STEP_SIZE = 0.1
-    tag_position = None
+    LIN_VEL_STEP_SIZE = 0.4
+    ANG_VEL_STEP_SIZE = 0.3
+    time_movement_started = 0
     last_blob_y_position = 0
 
     current_pose = Point(0, 0, 0)
@@ -67,7 +66,7 @@ class Detection:
 
     def setCurrentPose(self, data):
         try:
-            self.current_pose = data.pose.pose
+            self.current_pose = data.pose.pose.position
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
@@ -198,12 +197,15 @@ class Detection:
 
             THRESHOLD = 50
 
+            SECONDS_TO_TAG = 1.4
+
             current_tag = None
 
             # draw image --------------------------------
             im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             if self.show_cam:
+                # cv.imshow('raspi orig', frame)
                 cv.imshow("Keypoints", im_with_keypoints)
                 cv.waitKey(1)
             # -------------------------------------------
@@ -211,17 +213,15 @@ class Detection:
             # get biggest blob
             if len(keypoints) > 0:
                 current_tag = self.getBiggestBlog(keypoints)
+                # print("FOUND A TAG IN CAMERA IMAGE")
 
-            # --- State.SEARCHING ------------------------------------------------
             # blob detected
             if self.state == State.SEARCHING and len(keypoints) > 0:
                 # TODO: stop current navigation goal
                 self.state = State.CENTERING
                 print(self.state)
                 return
-            # --------------------------------------------------------------------
 
-            # --- State.CENTERING ------------------------------------------------
             # blob detected and currently centering
             if self.state == State.CENTERING and len(keypoints) > 0:
                 if self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
@@ -239,9 +239,7 @@ class Detection:
                 # TODO: start navigation again
                 print(self.state)
                 return
-            # --------------------------------------------------------------------
 
-            # --- State.MOVING_TO_TAG --------------------------------------------
             # lost vision of tag while moving to it
             if self.state == State.MOVING_TO_TAG and len(keypoints) == 0:
                 # did i loose it on the bottom of the image?
@@ -273,52 +271,27 @@ class Detection:
                 # keep moving straight
                 self.setMotorValues(self.LIN_VEL_STEP_SIZE, 0.0)
                 return
-            # --------------------------------------------------------------------
 
-            # --- State.TAG_REACHED ----------------------------------------------
             # tag reached, drive last x seconds straight
             if self.state == State.TAG_REACHED:
-                if self.tag_position is None:
-                    self.tag_position = self.calcPositionOfTag(self.current_pose)
+                if self.time_movement_started == 0:
+                    self.time_movement_started = time.time()
+                    print("SET TIME")
 
-                    print("current_pose:")
-                    print(self.current_pose.position)
-                    print("tag_position:")
-                    print(self.tag_position)
-                    return
+                if self.time_movement_started > 0:
+                    print("{} seconds passed".format(time.time() - self.time_movement_started))
 
-                distance_to_tag = self.calcDistance(self.current_pose.position, self.tag_position)
-
-                print("distance to tag: {}".format(distance_to_tag))
-
-                if distance_to_tag <= 0.3:
+                if time.time() - self.time_movement_started >= SECONDS_TO_TAG:
                     # stop
                     print(" TAG REACHED ")
                     self.setMotorValues(0.0, 0.0)
                     self.time_movement_started = 0
                     self.state = State.SEARCHING
+                    # TODO: store tag
                 return
-            # --------------------------------------------------------------------
 
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
-
-    def calcPositionOfTag(self, robot_pose):
-
-        _, _, yaw = tf.transformations.euler_from_quaternion(
-            [robot_pose.orientation.x, robot_pose.orientation.y, robot_pose.orientation.z, robot_pose.orientation.w])
-
-        tx = 0.3
-
-        T1 = np.array([
-            [np.cos(yaw), -np.sin(yaw), tx],
-            [np.sin(yaw), np.cos(yaw), 0],
-            [0, 0, 1],
-        ])
-
-        x, y, _ = np.asarray(np.matmul(T1, np.asarray([robot_pose.position.x, robot_pose.position.y, 1]).T))
-
-        return Point(x, y, 0)
 
     def saveTagsToDisk(self):
         filename = "{}/tags_{}.txt".format(expanduser("~"), int(time.time()))
