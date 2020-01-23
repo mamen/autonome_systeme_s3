@@ -32,15 +32,24 @@ class Detection:
     time_movement_started = 0
     last_blob_y_position = 0
 
+    tag_publisher = rospy.Publisher('tags_found', Point, queue_size=10)
+
+    debug = False
+
     current_pose = Point(0, 0, 0)
     tags_found = []
     state = State.SEARCHING
 
-    def __init__(self, num_tags, show_cam, tags_color):
+    def __init__(self, num_tags, show_cam, tags_color, debug):
         self.max_num_tags = num_tags
         self.show_cam = show_cam
         self.tags_color = tags_color
+        self.debug = debug
         self.detectTags()
+
+    def log(self, string):
+        if self.debug:
+            print(string)
 
     def constrain(self, input, low, high):
         if input < low:
@@ -213,13 +222,13 @@ class Detection:
             # get biggest blob
             if len(keypoints) > 0:
                 current_tag = self.getBiggestBlog(keypoints)
-                # print("FOUND A TAG IN CAMERA IMAGE")
+                # self.log("FOUND A TAG IN CAMERA IMAGE")
 
             # blob detected
             if self.state == State.SEARCHING and len(keypoints) > 0:
                 # TODO: stop current navigation goal
                 self.state = State.CENTERING
-                print(self.state)
+                print("now in state {}".format(self.state))
                 return
 
             # blob detected and currently centering
@@ -227,7 +236,7 @@ class Detection:
                 if self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
                     # tag is centered
                     self.state = State.MOVING_TO_TAG
-                    print(self.state)
+                    print("now in state {}".format(self.state))
                 else:
                     self.centerRobotToTag(self.getOffset(current_tag.pt[0], maskedImage.shape[1]), THRESHOLD)
 
@@ -237,25 +246,25 @@ class Detection:
             if self.state == State.CENTERING and len(keypoints) == 0:
                 self.state = State.SEARCHING
                 # TODO: start navigation again
-                print(self.state)
+                print("now in state {}".format(self.state))
                 return
 
             # lost vision of tag while moving to it
             if self.state == State.MOVING_TO_TAG and len(keypoints) == 0:
                 # did i loose it on the bottom of the image?
-                print(self.last_blob_y_position)
+                self.log(self.last_blob_y_position)
                 if self.last_blob_y_position > 550:
-                    print("###")
-                    print("# TAG LEFT BOTTOM")
-                    print("###")
+                    self.log("###")
+                    self.log("# TAG LEFT BOTTOM")
+                    self.log("###")
                     self.state = State.TAG_REACHED
-                    print(self.state)
+                    print("now in state {}".format(self.state))
                 else:
                     self.state = State.SEARCHING
                     # stop the motors
                     self.setMotorValues(0.0, 0.0)
                     # TODO: start navigation again
-                    print(self.state)
+                    print("now in state {}".format(self.state))
 
                 return
 
@@ -263,7 +272,7 @@ class Detection:
             if self.state == State.MOVING_TO_TAG and len(keypoints) > 0:
                 if not self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
                     self.state = State.CENTERING
-                    print(self.state)
+                    print("now in state {}".format(self.state))
                     return
 
                 self.last_blob_y_position = current_tag.pt[1]
@@ -276,18 +285,20 @@ class Detection:
             if self.state == State.TAG_REACHED:
                 if self.time_movement_started == 0:
                     self.time_movement_started = time.time()
-                    print("SET TIME")
+                    self.log("SET TIME")
 
                 if self.time_movement_started > 0:
-                    print("{} seconds passed".format(time.time() - self.time_movement_started))
+                    self.log("{} seconds passed".format(time.time() - self.time_movement_started))
 
                 if time.time() - self.time_movement_started >= SECONDS_TO_TAG:
                     # stop
-                    print(" TAG REACHED ")
+                    self.log(" TAG REACHED ")
                     self.setMotorValues(0.0, 0.0)
                     self.time_movement_started = 0
                     self.state = State.SEARCHING
-                    # TODO: store tag
+
+                    # publish to topic tags_found
+                    self.tag_publisher.publish(self.current_pose)
                 return
 
         except CvBridgeError as e:
@@ -329,6 +340,7 @@ def main():
 
         NUM_TAGS = rospy.get_param("~num_tags_in_maze")
         SHOW_CAMERA = rospy.get_param("~show_camera")
+        DEBUG = rospy.get_param("~debug")
 
         color = rospy.get_param("~tags_color")
 
@@ -349,10 +361,12 @@ def main():
         rospy.loginfo('# SHOW_CAMERA: \t{0}'.format(SHOW_CAMERA))
         rospy.loginfo('# TAGS_COLOR: \t{0}'.format(TAGS_COLOR))
 
-        Detection(NUM_TAGS, SHOW_CAMERA, TAGS_COLOR)
+        Detection(NUM_TAGS, SHOW_CAMERA, TAGS_COLOR, DEBUG)
     except rospy.ROSInterruptException:
         pass
 
 
 if __name__ == '__main__':
     main()
+
+

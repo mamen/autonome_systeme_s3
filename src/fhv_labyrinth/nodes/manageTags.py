@@ -41,8 +41,8 @@ class Manage():
         if self.isNewTag(data):
             rospy.loginfo("NEW TAG WAS FOUND")
             self.TAGS.append(data)
-        # else:
-            # rospy.loginfo("TAG ALREADY FOUND")
+        else:
+            rospy.loginfo("TAG ALREADY FOUND")
 
     def listenForTags(self):
 
