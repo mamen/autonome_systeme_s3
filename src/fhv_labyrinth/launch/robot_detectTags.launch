@@ -9,5 +9,6 @@
       <param name="num_tags_in_maze" value="5" />
       <param name="show_camera" value="True" />
       <param name="tags_color" value="GREEN" /> <!-- supported values: RED, BLUE, GREEN -->
+      <param name="debug" value="True" />
   </node>
 </launch>
