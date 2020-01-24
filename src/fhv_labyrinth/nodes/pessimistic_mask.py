@@ -20,13 +20,13 @@ def trapezeMask(center, view):
     cx, cy = center
 
     # top left
-    p1 = cx - w_max, cy - d_max
+    p1 = cx + d_max, cy + w_max
     # top right
-    p2 = cx + w_max, cy - d_max
+    p2 = cx + d_max, cy - w_max
     # bottom right
-    p3 = cx + w_min, cy - d_min
+    p3 = cx + d_min, cy - w_min
     # bottom left
-    p4 = cx - w_min, cy - d_min
+    p4 = cx + d_min, cy + w_min
 
     pts = ar((p1, p2, p3, p4))
     return pts
@@ -68,7 +68,7 @@ def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
     
     dimension = (width, height)
     center = ((pos_xy - origin_xy) / resolution).astype(int)
-    ang = yaw + pi / 2
+    ang = yaw
 
     # create view_mask
     pts = trapezeMask(center, view)

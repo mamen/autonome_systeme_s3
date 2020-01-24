@@ -1,0 +1,7 @@
+<launch>
+  <!-- Save Map -->
+  <group>
+    <arg name="map_file" default="$(find fhv_labyrinth)/maps/labyrinth"/>
+    <node pkg="map_server" name="map_server" type="map_saver" args="-f $(arg map_file)"/>
+  </group>
+</launch>
