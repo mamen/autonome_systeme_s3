@@ -56,12 +56,11 @@ class Detection:
             print(string)
 
     def isNewTag(self, newTag):
-
         if len(self.TAGS) == 0:
             return True
 
         for t in self.TAGS:
-            if self.calcDistance(t, newTag) < 0.1:
+            if self.calcDistance(t, newTag) < 0.5:
                 return False
 
         return True
@@ -94,18 +93,18 @@ class Detection:
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
-    def isNewTag(self, newTag):
-        if len(self.tags_found) == 0:
-            return True
-
-        for t in self.tags_found:
-            distance = self.calcDistance(t, newTag)
-            if distance < 0.66:
-                return False
-            else:
-                rospy.loginfo(distance)
-
-        return True
+    # def isNewTag(self, newTag):
+    #     if len(self.tags_found) == 0:
+    #         return True
+    #
+    #     for t in self.tags_found:
+    #         distance = self.calcDistance(t, newTag)
+    #         if distance < 0.66:
+    #             return False
+    #         else:
+    #             rospy.loginfo(distance)
+    #
+    #     return True
 
     def calcDistance(self, t1, t2):
         return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
@@ -277,9 +276,10 @@ class Detection:
                 tag = Point(x=position[0], y=position[1], z=1)
 
                 if self.isNewTag(tag):
-                    print("========\r\nx: {}\r\ny: {}")
+                    print("========\r\nx: {}\r\ny: {}".format(tag.x, tag.y))
                     rospy.loginfo("NEW TAG WAS FOUND")
                     self.TAGS.append(tag)
+                    print("I now have found {} tags".format(len(self.TAGS)))
 
 
                 # # print("###############################################################")
