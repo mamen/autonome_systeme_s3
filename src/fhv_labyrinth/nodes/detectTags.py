@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PointStamped
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -11,6 +11,8 @@ from enum import Enum
 from os.path import expanduser
 import time
 from geometry_msgs.msg import Twist
+import tf
+
 
 class State(Enum):
     SEARCHING = 1,
@@ -26,13 +28,15 @@ class Color(Enum):
 
 
 class Detection:
-
     LIN_VEL_STEP_SIZE = 0.4
     ANG_VEL_STEP_SIZE = 0.3
     time_movement_started = 0
     last_blob_y_position = 0
 
+    TAGS = []
+
     tag_publisher = rospy.Publisher('tags_found', Point, queue_size=10)
+    marker_publisher = rospy.Publisher('clicked_point', PointStamped, queue_size=1)
 
     debug = False
 
@@ -51,6 +55,17 @@ class Detection:
         if self.debug:
             print(string)
 
+    def isNewTag(self, newTag):
+
+        if len(self.TAGS) == 0:
+            return True
+
+        for t in self.TAGS:
+            if self.calcDistance(t, newTag) < 0.1:
+                return False
+
+        return True
+
     def constrain(self, input, low, high):
         if input < low:
             input = low
@@ -60,7 +75,7 @@ class Detection:
         return input
 
     def checkLinearLimitVelocity(self, vel):
-       return self.constrain(vel, -0.22, 0.22)
+        return self.constrain(vel, -0.22, 0.22)
 
     def checkAngularLimitVelocity(self, vel):
         return self.constrain(vel, -2.84, 2.84)
@@ -75,7 +90,7 @@ class Detection:
 
     def setCurrentPose(self, data):
         try:
-            self.current_pose = data.pose.pose.position
+            self.current_pose = data.pose.pose
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
 
@@ -186,7 +201,7 @@ class Detection:
         # Detect blobs.
         return detector.detect(mask), mask
 
-    def getBiggestBlog(self, keypoints):
+    def getBiggestBlob(self, keypoints):
         return sorted(keypoints, key=lambda x: x.size, reverse=True)[0]
 
     def getOffset(self, tag_x, image_width):
@@ -194,6 +209,39 @@ class Detection:
 
     def isCurrentTagCentered(self, current_tag, image_width, threshold):
         return -threshold < self.getOffset(current_tag.pt[0], image_width) < threshold
+
+    def calculatePositionOfTag(self, robot_pose, x, y):
+        H = np.array([[-0.09288180869054626, 0.0054416583613956645, 55.428253772214454],
+                      [0.0025116067633560767, 0.0029759558170538375, -97.45956201150065],
+                      [0.00010195975796577268, -0.006257619108708003, 1.0]])
+
+        result = H.dot(np.asarray([x, y, 1]))
+
+        x = result[1] / result[2]
+        y = result[0] / result[2]
+
+        _, _, phi = tf.transformations.euler_from_quaternion(
+            [robot_pose.orientation.x, robot_pose.orientation.y, robot_pose.orientation.z, robot_pose.orientation.w])
+
+        T = np.asarray(
+            [
+                [np.cos(phi), -np.sin(phi), robot_pose.position.x],
+                [np.sin(phi), np.cos(phi), robot_pose.position.y],
+                [0, 0, 1]
+            ]
+        )
+
+        x, y, z = np.matmul(T, np.asarray([(x/100), (y/100), 1]))
+
+        pt = PointStamped()
+        pt.header.frame_id = "base_link"
+        pt.point.x = x
+        pt.point.y = y
+        pt.point.z = 1
+
+        self.marker_publisher.publish(pt)
+
+        return [x, y]
 
     def processImage(self, data):
 
@@ -211,7 +259,8 @@ class Detection:
             current_tag = None
 
             # draw image --------------------------------
-            im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255), cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255),
+                                                 cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             if self.show_cam:
                 # cv.imshow('raspi orig', frame)
@@ -221,85 +270,98 @@ class Detection:
 
             # get biggest blob
             if len(keypoints) > 0:
-                current_tag = self.getBiggestBlog(keypoints)
-                # self.log("FOUND A TAG IN CAMERA IMAGE")
+                current_tag = self.getBiggestBlob(keypoints)
 
-            # blob detected
-            if self.state == State.SEARCHING and len(keypoints) > 0:
-                # TODO: stop current navigation goal
-                self.state = State.CENTERING
-                print("now in state {}".format(self.state))
-                return
+                position = self.calculatePositionOfTag(self.current_pose, current_tag.pt[0], current_tag.pt[1])
 
-            # blob detected and currently centering
-            if self.state == State.CENTERING and len(keypoints) > 0:
-                if self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
-                    # tag is centered
-                    self.state = State.MOVING_TO_TAG
-                    print("now in state {}".format(self.state))
-                else:
-                    self.centerRobotToTag(self.getOffset(current_tag.pt[0], maskedImage.shape[1]), THRESHOLD)
+                tag = Point(x=position[0], y=position[1], z=1)
 
-                return
+                if self.isNewTag(tag):
+                    print("========\r\nx: {}\r\ny: {}")
+                    rospy.loginfo("NEW TAG WAS FOUND")
+                    self.TAGS.append(tag)
 
-            # no blob detected but currently centering some tag
-            if self.state == State.CENTERING and len(keypoints) == 0:
-                self.state = State.SEARCHING
-                # TODO: start navigation again
-                print("now in state {}".format(self.state))
-                return
 
-            # lost vision of tag while moving to it
-            if self.state == State.MOVING_TO_TAG and len(keypoints) == 0:
-                # did i loose it on the bottom of the image?
-                self.log(self.last_blob_y_position)
-                if self.last_blob_y_position > 550:
-                    self.log("###")
-                    self.log("# TAG LEFT BOTTOM")
-                    self.log("###")
-                    self.state = State.TAG_REACHED
-                    print("now in state {}".format(self.state))
-                else:
-                    self.state = State.SEARCHING
-                    # stop the motors
-                    self.setMotorValues(0.0, 0.0)
-                    # TODO: start navigation again
-                    print("now in state {}".format(self.state))
+                # # print("###############################################################")
+                # print("Robot position: {}; {}".format(self.current_pose.position.x, self.current_pose.position.y))
+                # print("Tag position: {}; {}".format(position[0], position[1]))
 
-                return
-
-            # tag still detected while moving to it
-            if self.state == State.MOVING_TO_TAG and len(keypoints) > 0:
-                if not self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
-                    self.state = State.CENTERING
-                    print("now in state {}".format(self.state))
-                    return
-
-                self.last_blob_y_position = current_tag.pt[1]
-
-                # keep moving straight
-                self.setMotorValues(self.LIN_VEL_STEP_SIZE, 0.0)
-                return
-
-            # tag reached, drive last x seconds straight
-            if self.state == State.TAG_REACHED:
-                if self.time_movement_started == 0:
-                    self.time_movement_started = time.time()
-                    self.log("SET TIME")
-
-                if self.time_movement_started > 0:
-                    self.log("{} seconds passed".format(time.time() - self.time_movement_started))
-
-                if time.time() - self.time_movement_started >= SECONDS_TO_TAG:
-                    # stop
-                    self.log(" TAG REACHED ")
-                    self.setMotorValues(0.0, 0.0)
-                    self.time_movement_started = 0
-                    self.state = State.SEARCHING
-
-                    # publish to topic tags_found
-                    self.tag_publisher.publish(self.current_pose)
-                return
+            # # blob detected
+            # if self.state == State.SEARCHING and len(keypoints) > 0:
+            #     # TODO: stop current navigation goal
+            #     self.state = State.CENTERING
+            #     print("now in state {}".format(self.state))
+            #     return
+            #
+            # # blob detected and currently centering
+            # if self.state == State.CENTERING and len(keypoints) > 0:
+            #     if self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
+            #         # tag is centered
+            #         self.state = State.MOVING_TO_TAG
+            #         print("now in state {}".format(self.state))
+            #     else:
+            #         self.centerRobotToTag(self.getOffset(current_tag.pt[0], maskedImage.shape[1]), THRESHOLD)
+            #
+            #     return
+            #
+            # # no blob detected but currently centering some tag
+            # if self.state == State.CENTERING and len(keypoints) == 0:
+            #     self.state = State.SEARCHING
+            #     # TODO: start navigation again
+            #     print("now in state {}".format(self.state))
+            #     return
+            #
+            # # lost vision of tag while moving to it
+            # if self.state == State.MOVING_TO_TAG and len(keypoints) == 0:
+            #     # did i loose it on the bottom of the image?
+            #     self.log(self.last_blob_y_position)
+            #     if self.last_blob_y_position > 550:
+            #         self.log("###")
+            #         self.log("# TAG LEFT BOTTOM")
+            #         self.log("###")
+            #         self.state = State.TAG_REACHED
+            #         print("now in state {}".format(self.state))
+            #     else:
+            #         self.state = State.SEARCHING
+            #         # stop the motors
+            #         self.setMotorValues(0.0, 0.0)
+            #         # TODO: start navigation again
+            #         print("now in state {}".format(self.state))
+            #
+            #     return
+            #
+            # # tag still detected while moving to it
+            # if self.state == State.MOVING_TO_TAG and len(keypoints) > 0:
+            #     if not self.isCurrentTagCentered(current_tag, maskedImage.shape[1], THRESHOLD):
+            #         self.state = State.CENTERING
+            #         print("now in state {}".format(self.state))
+            #         return
+            #
+            #     self.last_blob_y_position = current_tag.pt[1]
+            #
+            #     # keep moving straight
+            #     self.setMotorValues(self.LIN_VEL_STEP_SIZE, 0.0)
+            #     return
+            #
+            # # tag reached, drive last x seconds straight
+            # if self.state == State.TAG_REACHED:
+            #     if self.time_movement_started == 0:
+            #         self.time_movement_started = time.time()
+            #         self.log("SET TIME")
+            #
+            #     if self.time_movement_started > 0:
+            #         self.log("{} seconds passed".format(time.time() - self.time_movement_started))
+            #
+            #     if time.time() - self.time_movement_started >= SECONDS_TO_TAG:
+            #         # stop
+            #         self.log(" TAG REACHED ")
+            #         self.setMotorValues(0.0, 0.0)
+            #         self.time_movement_started = 0
+            #         self.state = State.SEARCHING
+            #
+            #         # publish to topic tags_found
+            #         self.tag_publisher.publish(self.current_pose.position)
+            #     return
 
         except CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
@@ -332,8 +394,8 @@ class Detection:
         finally:
             rospy.loginfo('Shutting down node...')
 
-def main():
 
+def main():
     try:
 
         rospy.init_node('detectTags')
@@ -368,5 +430,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
