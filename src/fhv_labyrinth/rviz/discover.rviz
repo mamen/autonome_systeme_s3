@@ -7,7 +7,7 @@ Panels:
         - /TF1/Frames1
         - /Image1
         - /PessimisticMap1/Orientation1
-        - /PointStamped1
+        - /MarkerArray2
       Splitter Ratio: 0.594406009
     Tree Height: 837
   - Class: rviz/Selection
@@ -232,6 +232,14 @@ Visualization Manager:
       Radius: 0.200000003
       Topic: /clicked_point
       Unreliable: false
+      Value: false
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: visualization_marker_array
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
