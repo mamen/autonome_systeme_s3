@@ -30,13 +30,17 @@ class Color(Enum):
 class Detection:
     LIN_VEL_STEP_SIZE = 0.4
     ANG_VEL_STEP_SIZE = 0.3
+
+    MAP_RESOLUTION = 0.05
+    MAP_OFFSET = [-10, -10]
+
     time_movement_started = 0
     last_blob_y_position = 0
 
     TAGS = []
 
     tag_publisher = rospy.Publisher('tags_found', Point, queue_size=10)
-    marker_publisher = rospy.Publisher('clicked_point', PointStamped, queue_size=1)
+    marker_publisher = rospy.Publisher('clicked_point', PointStamped, queue_size=1000)
 
     debug = False
 
@@ -233,12 +237,15 @@ class Detection:
         x, y, z = np.matmul(T, np.asarray([(x/100), (y/100), 1]))
 
         pt = PointStamped()
-        pt.header.frame_id = "base_link"
+        pt.header.frame_id = "map"
         pt.point.x = x
         pt.point.y = y
         pt.point.z = 1
 
         self.marker_publisher.publish(pt)
+
+        x = (x - self.MAP_OFFSET[0]) / self.MAP_RESOLUTION
+        y = (y - self.MAP_OFFSET[1]) / self.MAP_RESOLUTION
 
         return [x, y]
 
@@ -279,6 +286,7 @@ class Detection:
                     print("========\r\nx: {}\r\ny: {}".format(tag.x, tag.y))
                     rospy.loginfo("NEW TAG WAS FOUND")
                     self.TAGS.append(tag)
+
                     print("I now have found {} tags".format(len(self.TAGS)))
 
 
