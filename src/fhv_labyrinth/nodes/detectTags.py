@@ -3,7 +3,9 @@
 import rospy
 from sensor_msgs.msg import CompressedImage
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import Point, PointStamped, PoseStamped
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
 import cv2 as cv
 from cv_bridge import CvBridge, CvBridgeError
 import numpy as np
@@ -12,7 +14,8 @@ from os.path import expanduser
 import time
 from geometry_msgs.msg import Twist
 import tf
-
+import collections
+import copy
 
 class State(Enum):
     SEARCHING = 1,
@@ -40,9 +43,12 @@ class Detection:
     TAGS = []
 
     tag_publisher = rospy.Publisher('tags_found', Point, queue_size=10)
-    marker_publisher = rospy.Publisher('clicked_point', PointStamped, queue_size=1000)
+    # marker_publisher = rospy.Publisher('clicked_point', PointStamped, queue_size=1000)
+    marker_publisher = rospy.Publisher('visualization_marker_array', MarkerArray)
 
     debug = False
+
+    pose_history = collections.deque(maxlen=1000)
 
     current_pose = Point(0, 0, 0)
     tags_found = []
@@ -63,8 +69,11 @@ class Detection:
         if len(self.TAGS) == 0:
             return True
 
+        print("===")
+
         for t in self.TAGS:
-            if self.calcDistance(t, newTag) < 0.5:
+            print(self.calcDistance(t, newTag))
+            if self.calcDistance(t, newTag) < 25:
                 return False
 
         return True
@@ -93,22 +102,15 @@ class Detection:
 
     def setCurrentPose(self, data):
         try:
-            self.current_pose = data.pose.pose
+            if data is not None:
+
+                self.current_pose = data.pose
+
+                time = data.header.stamp.secs + (data.header.stamp.nsecs / 1000000000)
+
+                self.pose_history.appendleft((time, data.pose))
         except:
             rospy.logerr("AN ERROR OCCURED WHILE SETTING POSE")
-
-    # def isNewTag(self, newTag):
-    #     if len(self.tags_found) == 0:
-    #         return True
-    #
-    #     for t in self.tags_found:
-    #         distance = self.calcDistance(t, newTag)
-    #         if distance < 0.66:
-    #             return False
-    #         else:
-    #             rospy.loginfo(distance)
-    #
-    #     return True
 
     def calcDistance(self, t1, t2):
         return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
@@ -190,7 +192,7 @@ class Detection:
 
         # Filter by Area
         params.filterByArea = True
-        params.minArea = 300
+        params.minArea = 600
         params.maxArea = 1000000
 
         params.filterByCircularity = False
@@ -236,18 +238,25 @@ class Detection:
 
         x, y, z = np.matmul(T, np.asarray([(x/100), (y/100), 1]))
 
-        pt = PointStamped()
-        pt.header.frame_id = "map"
-        pt.point.x = x
-        pt.point.y = y
-        pt.point.z = 1
-
-        self.marker_publisher.publish(pt)
-
         x = (x - self.MAP_OFFSET[0]) / self.MAP_RESOLUTION
         y = (y - self.MAP_OFFSET[1]) / self.MAP_RESOLUTION
 
         return [x, y]
+
+    def getPoseToImage(self, image_timestamp):
+
+        queue = copy.copy(self.pose_history)
+
+        nearest = None
+
+        for data in queue:
+            if data[0] >= image_timestamp:
+                nearest = data[1]
+
+            if data[0] < image_timestamp:
+                return nearest
+
+    markerArray = MarkerArray()
 
     def processImage(self, data):
 
@@ -258,27 +267,25 @@ class Detection:
             maskedImage = self.maskImage(frame)
             keypoints, mask = self.detectBlobs(maskedImage)
 
-            THRESHOLD = 50
-
-            SECONDS_TO_TAG = 1.4
-
-            current_tag = None
-
             # draw image --------------------------------
             im_with_keypoints = cv.drawKeypoints(mask, keypoints, np.array([]), (0, 0, 255),
                                                  cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 
             if self.show_cam:
-                # cv.imshow('raspi orig', frame)
+                cv.imshow('raspi orig', frame)
                 cv.imshow("Keypoints", im_with_keypoints)
                 cv.waitKey(1)
             # -------------------------------------------
 
             # get biggest blob
-            if len(keypoints) > 0:
+            if len(keypoints) > 0 and self.current_pose is not None:
                 current_tag = self.getBiggestBlob(keypoints)
 
-                position = self.calculatePositionOfTag(self.current_pose, current_tag.pt[0], current_tag.pt[1])
+                time_stamp = data.header.stamp.secs + (data.header.stamp.nsecs / 1000000000)
+
+                pose = self.getPoseToImage(time_stamp)
+
+                position = self.calculatePositionOfTag(pose, current_tag.pt[0], current_tag.pt[1])
 
                 tag = Point(x=position[0], y=position[1], z=1)
 
@@ -286,6 +293,35 @@ class Detection:
                     print("========\r\nx: {}\r\ny: {}".format(tag.x, tag.y))
                     rospy.loginfo("NEW TAG WAS FOUND")
                     self.TAGS.append(tag)
+
+                    marker = Marker()
+                    marker.header.frame_id = "/map"
+                    marker.type = marker.SPHERE
+                    marker.action = marker.ADD
+                    marker.scale.x = 0.2
+                    marker.scale.y = 0.2
+                    marker.scale.z = 0.2
+                    marker.color.a = 1.0
+                    marker.color.r = 1.0
+                    marker.color.g = 1.0
+                    marker.color.b = 0.0
+                    marker.pose.orientation.w = 1.0
+                    marker.pose.position.x = (tag.x * self.MAP_RESOLUTION) + self.MAP_OFFSET[0]
+                    marker.pose.position.y = (tag.y * self.MAP_RESOLUTION) + self.MAP_OFFSET[1]
+                    marker.pose.position.z = 1
+
+                    self.markerArray.markers.append(marker)
+
+                    # Renumber the marker IDs
+                    id = 0
+                    for m in self.markerArray.markers:
+                        m.id = id
+                        id += 1
+
+                    # Publish the MarkerArray
+                    self.marker_publisher.publish(self.markerArray)
+
+
 
                     print("I now have found {} tags".format(len(self.TAGS)))
 
@@ -394,7 +430,7 @@ class Detection:
         try:
             rospy.loginfo("waiting for camera image")
             rospy.Subscriber(RASPI_CAM__TOPIC, CompressedImage, self.processImage)
-            rospy.Subscriber(ODOMETRY_TOPIC, Odometry, self.setCurrentPose)
+            rospy.Subscriber(ODOMETRY_TOPIC, PoseStamped, self.setCurrentPose)
 
             rospy.spin()
         except Exception as e:
