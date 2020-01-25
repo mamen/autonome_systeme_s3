@@ -8,7 +8,7 @@
 <!--  </group>-->
 
   <!-- save map -->
-  <!-- rosrun map_server map_saver -f nameoffile -->
+  <!-- roslaunch fhv_labyrinth mapsave.launch -->
   
   <!-- Visualzation -->
   <group>
