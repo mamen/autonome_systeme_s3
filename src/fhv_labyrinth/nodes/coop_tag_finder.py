@@ -25,10 +25,10 @@ class CoopTagFinder(object):
     self.sub_found = rospy.Subscriber(found_topic, coop_data_class, self.onFound)
 
     # Create an action client called "move_base" with action definition file "MoveBaseAction"
-    client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
+    self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
         
     # Waits until the action server has started up and started listening for goals.
-    client.wait_for_server()
+    self.client.wait_for_server()
 
   def done(self):
     return (len(self.search_list) + len(self.searching_list)) == 0
@@ -48,14 +48,15 @@ class CoopTagFinder(object):
     pass
 
   def localize(self):
-    rospy.wait_for_service('amcl/global_localization')
-    amcl_global_localization = rospy.ServiceProxy('amcl/global_localization', Empty)
+    rospy.wait_for_service('/global_localization')
+    amcl_global_localization = rospy.ServiceProxy('/global_localization', Empty)
     amcl_global_localization(EmptyRequest())
 
   def findAll(self):
     if self.done():
       return
 
+    # activate global localization (we can be anywhere)
     self.localize()
 
     while not rospy.is_shutdown() and not self.done():
@@ -79,19 +80,19 @@ class CoopTagFinder(object):
       goal.target_pose.pose.orientation.w = 1.0
 
       # Sends the goal to the action server.
-      client.send_goal(goal)
+      self.client.send_goal(goal)
       # Waits for the server to finish performing the action.
-      wait = client.wait_for_result()
+      wait = self.client.wait_for_result()
       # If the result doesn't arrive, assume the Server is not available
       if not wait:
           rospy.logerr("Action server not available!")
           rospy.signal_shutdown("Action server not available!")
       else:
           # Result of executing the action
-          result = client.get_result()
+          result = self.client.get_result()
 
           # TODO analyze result to determine whether goal was found or not
-          self.pub_found(target)
+          self.pub_found.publish(target)
 
 def main():
     try:
@@ -100,7 +101,8 @@ def main():
         search_topic = rospy.get_param('~search_topic', default='/search')
         found_topic = rospy.get_param('~found_topic', default='/found')
 
-        tag_positions = [(1, 1)]
+        # TODO: use actual tag positions here
+        tag_positions = [(0, 0.1)]
 
         ctf = CoopTagFinder(tag_positions, search_topic, found_topic)
         ctf.findAll()

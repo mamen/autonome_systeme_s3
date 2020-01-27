@@ -5,6 +5,13 @@
     <arg name="cmd_vel_topic" default="/cmd_vel" />
     <arg name="move_base_vel_topic" default="/move_base_vel" />
     <arg name="spinner_vel_topic" default="/spinner_vel" />
+    <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
+
+    <!-- Tag Saver -->
+    <node pkg="fhv_labyrinth" type="tag_saver.py" name="tag_saver" respawn="false">
+      <param name="topic" value="tags_found" />
+      <param name="filename" value="$(arg tag_file)" />
+    </node>
 
     <!-- SLAM -->
     <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
@@ -22,6 +29,16 @@
       <param name="sight_distance_max" value="20" />
       <param name="sight_width_min" value="2" />
       <param name="sight_width_max" value="15" />
+    </node>
+
+    <!-- detectTags -->
+    <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
+      <param name="image_topic" value="/raspicam_node/image/compressed" />
+      <param name="odometry_topic" value="/robot_pose" />
+      <param name="num_tags_in_maze" value="5" />
+      <param name="show_camera" value="True" />
+      <param name="tags_color" value="GREEN" /> <!-- supported values: RED, BLUE, GREEN -->
+      <param name="debug" value="True" />
     </node>
 
     <!-- Multiplexer -->
@@ -56,9 +73,9 @@
       <!-- Used for weighting frontiers. (frontier size). -->
       <param name="gain_scale" value="1.0"/>
       <!-- Transform tolerance to use when transforming robot pose. -->
-      <param name="transform_tolerance" value="0.3"/>
+      <param name="transform_tolerance" value="0.5"/>
       <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
-      <param name="min_frontier_size" value="0.3"/>
+      <param name="min_frontier_size" value="0.1"/>
     </node>
 
     <!-- Spin once at start -->
