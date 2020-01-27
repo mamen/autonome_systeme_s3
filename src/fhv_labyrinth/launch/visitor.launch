@@ -7,6 +7,7 @@
     <arg name="initial_pose_x" default="0.0"/>
     <arg name="initial_pose_y" default="0.0"/>
     <arg name="initial_pose_a" default="0.0"/>
+    <arg name="cmd_vel_topic" default="/cmd_vel" />
 
     <!-- Turtlebot3 -->
     <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
@@ -49,6 +50,18 @@
       <param name="odom_alpha4"               value="0.1"/>
       <param name="odom_frame_id"             value="odom"/>
       <param name="base_frame_id"             value="base_footprint"/>
+    </node>
+
+    <!-- Movement -->
+    <node pkg="move_base" type="move_base" respawn="true" name="move_base">
+      <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+      <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
+      <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
+      <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
+      <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+      <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
+      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+      <remap from="cmd_vel" to="$(arg cmd_vel_topic)"/>
     </node>
 
     <!-- Visualzation -->
