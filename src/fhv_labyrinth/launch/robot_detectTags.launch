@@ -7,7 +7,7 @@
       <param name="image_topic" value="/raspicam_node/image/compressed" />
       <param name="odometry_topic" value="/robot_pose" />
       <param name="num_tags_in_maze" value="5" />
-      <param name="show_camera" value="True" />
+      <param name="show_camera" value="False" />
       <param name="tags_color" value="GREEN" /> <!-- supported values: RED, BLUE, GREEN -->
       <param name="debug" value="True" />
   </node>
