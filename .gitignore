@@ -116,3 +116,6 @@ src/turtlebot3_simulations/*
 
 # do not version control maps
 **/maps/**
+
+# do not version control discovered tags
+**/tags/**
