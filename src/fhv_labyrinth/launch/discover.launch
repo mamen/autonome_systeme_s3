@@ -7,38 +7,29 @@
     <arg name="spinner_vel_topic" default="/spinner_vel" />
     <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
 
-    <!-- Tag Saver -->
-    <node pkg="fhv_labyrinth" type="tag_saver.py" name="tag_saver" respawn="false">
-      <param name="topic" value="tags_found" />
-      <param name="filename" value="$(arg tag_file)" />
-    </node>
-
     <!-- SLAM -->
     <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
       <arg name="slam_methods" value="gmapping" />
       <arg name="open_rviz" value="false" />
     </include>
 
+    <!-- Tag Detector -->
+    <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false">
+      <param name="image_topic" value="/raspicam_node/image/compressed" />
+      <param name="odom_topic" value="/robot_pose" />
+      <param name="filename" value="$(arg tag_file)" />
+    </node>
+
     <!-- Pessimistic Mapping -->
     <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" respawn="false">
       <param name="map_topic" value="map" />
       <param name="odom_topic" value="odom" />
       <param name="pessimistic_topic" value="pessimistic" />
-      <param name="rate" value="5" />
+      <param name="rate" value="1" />
       <param name="sight_distance_min" value="6" />
       <param name="sight_distance_max" value="20" />
       <param name="sight_width_min" value="2" />
       <param name="sight_width_max" value="15" />
-    </node>
-
-    <!-- detectTags -->
-    <node pkg="fhv_labyrinth" type="detectTags.py" name="detectTags" output="screen">
-      <param name="image_topic" value="/raspicam_node/image/compressed" />
-      <param name="odometry_topic" value="/robot_pose" />
-      <param name="num_tags_in_maze" value="5" />
-      <param name="show_camera" value="True" />
-      <param name="tags_color" value="GREEN" /> <!-- supported values: RED, BLUE, GREEN -->
-      <param name="debug" value="True" />
     </node>
 
     <!-- Multiplexer -->
@@ -62,6 +53,9 @@
       <param name="robot_base_frame" value="base_link"/>
       <!-- Specifies topic of source nav_msgs/OccupancyGrid. Mandatory. -->
       <param name="costmap_topic" value="pessimistic"/>
+      <!-- <param name="costmap_topic" value="map"/> -->
+      <!-- Specifies topic of source map_msgs/OccupancyGridUpdate. Not necessary if source of map is always publishing full updates, i.e. does not provide this topic. -->
+      <!-- <param name="costmap_updates_topic" value="map_updates"/> -->
       <!-- Specifies whether or not publish visualized frontiers. -->
       <param name="visualize" value="true"/>
       <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
@@ -69,7 +63,7 @@
       <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
       <param name="progress_timeout" value="10.0"/>
       <!-- Used for weighting frontiers. (distance to frontier). -->
-      <param name="potential_scale" value="0.001"/>
+      <param name="potential_scale" value="0.1"/>
       <!-- Used for weighting frontiers. (frontier size). -->
       <param name="gain_scale" value="1.0"/>
       <!-- Transform tolerance to use when transforming robot pose. -->

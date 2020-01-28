@@ -170,6 +170,7 @@ catkin_install_python(PROGRAMS
     nodes/spinner.py
     nodes/tag_saver.py
     nodes/lidar_filter.py
+    nodes/tag_detector.py
     DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
