@@ -152,7 +152,7 @@ class TagDetector(object):
             _x, _y = _y, -_x
 
             ps = PointStamped()
-            ps.header.frame_id = 'base_link'
+            ps.header.frame_id = 'camera_link'
             # ps.header.stamp = rospy.Time(0) 
             ps.header.stamp = image_msg.header.stamp
             ps.point = Point(x=_x, y=_y)

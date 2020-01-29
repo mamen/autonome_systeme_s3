@@ -13,6 +13,9 @@
       <arg name="open_rviz" value="false" />
     </include>
 
+    <!-- Camera Transformer -->
+    <node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />
+
     <!-- Tag Detector -->
     <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false">
       <param name="image_topic" value="/raspicam_node/image/compressed" />
