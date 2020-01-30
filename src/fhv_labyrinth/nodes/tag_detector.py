@@ -40,16 +40,33 @@ detector = cv.SimpleBlobDetector_create(params)
 #         [0.00010195975796577268, -0.006257619108708003, 1.0]
 #     ]
 # )
-H = np.array(
-    [
-        [-0.0798932872571099, 0.0067893048637875765, 46.19885049780504],
-        [0.0032200929732064906, -0.026047246045125275, -78.77793179594805],
-        [2.83100363868755e-05, -0.005435342278868193, 1.0]
-    ]
-)
+
+# H = np.array(
+#     [
+#         [-0.0798932872571099, 0.0067893048637875765, 46.19885049780504],
+#         [0.0032200929732064906, -0.026047246045125275, -78.77793179594805],
+#         [2.83100363868755e-05, -0.005435342278868193, 1.0]
+#     ]
+# )
+
+img_pts = np.array((
+    (566.16085207, 633.06493435),
+    (574.13351993, 530.97218097),
+    (458.1943503,  530.73832472),
+    (415.68878989, 633.27593301),
+))
+
+real_pts = np.array((
+    (0.40, 0.025), # 1'
+    (0.50, 0.025), # 2'
+    (0.50, 0.075), # 3'
+    (0.40, 0.075), # 4'
+))
+
+H = cv.findHomography(img_pts, real_pts)[0]
 
 # tag config
-MIN_DISTANCE_BETWEEN_TAGS = 0.5
+MIN_DISTANCE_BETWEEN_TAGS = 0.6
 
 def tag2Marker(_id, tag):
     print(id, tag.x, tag.y)
@@ -70,7 +87,7 @@ def tag2Marker(_id, tag):
     return marker
 
 class TagDetector(object):
-    def __init__(self, image_topic, filename):
+    def __init__(self, topic_image, filename):
         self.filename = filename
         
         self.image_msg = None
@@ -82,7 +99,7 @@ class TagDetector(object):
         self.writeHeader()
 
         self.tl = tf.TransformListener()
-        self.sub_image = rospy.Subscriber(image_topic, CompressedImage, self.onImage)
+        self.sub_image = rospy.Subscriber(topic_image, CompressedImage, self.onImage)
 
         if show_tags:
             self.tag_markers = MarkerArray()
@@ -147,9 +164,7 @@ class TagDetector(object):
             result = H.dot(np.asarray((current_tag.pt[0], current_tag.pt[1], 1)))
             result /= result[2]
 
-            _x, _y, _ = result / 100 # in meter
-            # rotated by 90 degrees into correct coordinate system
-            _x, _y = _y, -_x
+            _x, _y, _ = result # in meter
 
             ps = PointStamped()
             ps.header.frame_id = 'camera_link'
@@ -207,10 +222,10 @@ def main():
     try:
         rospy.init_node('tag_detector', anonymous=True)
         
-        image_topic = rospy.get_param('~image_topic', default='/raspicam_node/image/compressed')
-        filename = rospy.get_param('~filename', default='tags.csv')
+        topic_image = rospy.get_param('~topic_image', default='/raspicam_node/image/compressed')
+        filename = rospy.get_param('~tag_file', default='tags.csv')
 
-        td = TagDetector(image_topic, filename)
+        td = TagDetector(topic_image, filename)
         td.spin()
     except rospy.ROSInterruptException:
         pass

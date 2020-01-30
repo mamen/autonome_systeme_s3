@@ -12,18 +12,18 @@ parent = 'base_link'
 
 # config
 translation_xyz = (
-    0.045,#4.5cm
-    0.008,#0.8cm
-    0.14,#14cm
+    0, # 0m
+    0, # 0m
+    -0.025, # -2.5cm
 )
 
 # for easy configuration https://quaternions.online
-# euler: 0, 10, -5 deg
+# euler: 0, 0, 0
 rotation_xyzw = (
-    0.004,
-    0.087,
-    -0.043,
-    0.995
+    0.0,
+    0.0,
+    0.0,
+    1.0
 )
 
 def main():
