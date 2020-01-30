@@ -8,7 +8,7 @@
     <arg name="topic_spinner_vel" default="/spinner_vel" />
     <arg name="topic_image" default="/raspicam_node/image/compressed" />
     <arg name="topic_map" default="map" />
-    <arg name="topic_odom" default="odom" />
+    <arg name="topic_odom" default="robot_pose" />
     <arg name="topic_scan" default="scan" />
     <arg name="topic_full" default="pessimistic" />
     <arg name="topic_update" default="pessimistic_update" />
@@ -28,13 +28,13 @@
     <node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />
 
     <!-- Tag Detector -->
-    <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false">
+    <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen">
       <param name="topic_image" value="$(arg topic_image)" />
       <param name="tag_file" value="$(arg tag_file)" />
     </node>
 
     <!-- Pessimistic Mapping -->
-    <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" respawn="false">
+    <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" respawn="false" output="screen">
       <param name="topic_map" value="$(arg topic_map)" />
       <param name="topic_odom" value="$(arg topic_odom)" />
       <param name="topic_scan" value="$(arg topic_scan)" />
@@ -49,7 +49,7 @@
     </node>
 
     <!-- Multiplexer -->
-    <node pkg="topic_tools" type="mux" respawn="false" name="mux" output="screen" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_spinner_vel)" />
+    <node pkg="topic_tools" type="mux" respawn="false" name="mux" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_spinner_vel)" />
 
     <!-- Movement -->
     <node pkg="move_base" type="move_base" respawn="true" name="move_base">
@@ -64,7 +64,7 @@
     </node>
 
     <!-- Autonomous Exploration -->
-    <node pkg="explore_lite" type="explore" respawn="false" name="explore" output="screen">
+    <node pkg="explore_lite" type="explore" respawn="false" name="explore">
       <!-- The name of the base frame of the robot. This is used for determining robot position on map. Mandatory. -->
       <param name="robot_base_frame" value="base_link"/>
       <!-- Specifies topic of source nav_msgs/OccupancyGrid. Mandatory. -->
@@ -75,13 +75,13 @@
       <!-- Specifies whether or not publish visualized frontiers. -->
       <param name="visualize" value="true"/>
       <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
-      <param name="planner_frequency" value="1.0"/>
+      <param name="planner_frequency" value="0.1"/>
       <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
       <param name="progress_timeout" value="10.0"/>
       <!-- Used for weighting frontiers. (distance to frontier). -->
-      <param name="potential_scale" value="0.1"/>
+      <param name="potential_scale" value="0.2"/>
       <!-- Used for weighting frontiers. (frontier size). -->
-      <param name="gain_scale" value="1.0"/>
+      <param name="gain_scale" value="0.3"/>
       <!-- Transform tolerance to use when transforming robot pose. -->
       <param name="transform_tolerance" value="0.5"/>
       <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->

@@ -6,10 +6,12 @@ import numpy as np
 from nav_msgs.msg import OccupancyGrid, Odometry
 from map_msgs.msg import OccupancyGridUpdate
 from sensor_msgs.msg import LaserScan
+from geometry_msgs.msg import PoseStamped
 
 from pessimistic_mask import createPessimisticMask
 
 show_view = True
+
 
 class PessimisticMapper(object):
     def __init__(self, topics, view):
@@ -33,7 +35,7 @@ class PessimisticMapper(object):
 
         # subscribers
         self.sub_map = rospy.Subscriber(_map, OccupancyGrid, self.onMapMessage)
-        self.sub_odom = rospy.Subscriber(_odom, Odometry, self.onOdomMessage)
+        self.sub_odom = rospy.Subscriber(_odom, PoseStamped, self.onOdomMessage)
         self.sub_scan = rospy.Subscriber(_scan, LaserScan, self.onScanMessage)
 
     def onMapMessage(self, msg):
@@ -41,7 +43,7 @@ class PessimisticMapper(object):
             self.dimension = (msg.info.height, msg.info.width)
             self.pessimistic_map = np.ones(self.dimension).astype(bool)
         self.map_msg = msg
-        
+
     def onOdomMessage(self, msg):
         self.odom_msg = msg
 
@@ -51,7 +53,7 @@ class PessimisticMapper(object):
     def runMapping(self, rate_full, rate_update):
         counter_limit = rate_update / rate_full
         counter = 0
-        
+
         seq_full = 0
         seq_update = 0
 
@@ -63,16 +65,17 @@ class PessimisticMapper(object):
                 # create visible area mask
                 mask = createPessimisticMask(self.map_msg, self.odom_msg, self.scan_msg, self.view)
                 # mark visible area at current pose as visited (can be shown in map now)
-                self.pessimistic_map[mask==True] = False
+                self.pessimistic_map[mask == True] = False
 
                 # bring data in shape
                 pessimistic = np.array(self.map_msg.data).reshape(self.dimension)
 
                 # mark pessimistic fields as Unknown
-                pessimistic[self.pessimistic_map==True] = -1
+                pessimistic[self.pessimistic_map == True] = -1
 
                 # determine region of update
                 xs, ys = np.where(mask)
+
                 x = np.min(xs)
                 y = np.min(ys)
                 height = np.max(xs) - x + 1
@@ -90,15 +93,15 @@ class PessimisticMapper(object):
                 update.y = y
                 update.width = width
                 update.height = height
-                update.data = pessimistic[x:x+height,y:y+width].reshape(-1)
+                update.data = pessimistic[x:x + height, y:y + width].reshape(-1)
 
                 # publish update
                 self.pub_update.publish(update)
 
                 if show_view:
                     view_data = mask.astype(int)
-                    view_data[mask==False] = -1
-                    view_data[mask==True] = 0
+                    view_data[mask == False] = -1
+                    view_data[mask == True] = 0
                     view = OccupancyGrid()
                     view.header.frame_id = 'map'
                     view.header.seq = seq_update
@@ -115,7 +118,7 @@ class PessimisticMapper(object):
                 if counter == 0:
                     # reset countdown
                     counter = counter_limit
-                    
+
                     # perform full update
                     full = OccupancyGrid()
                     full.header.frame_id = 'map'
@@ -127,7 +130,7 @@ class PessimisticMapper(object):
                     self.pub_full.publish(full)
 
                     seq_full += 1
-                
+
                 counter -= 1
 
             r.sleep()
@@ -139,7 +142,7 @@ def main():
 
         topics = (
             rospy.get_param('~topic_map', default='map'),
-            rospy.get_param('~topic_odom', default='odom'),
+            rospy.get_param('~topic_odom', default='robot_pose'),
             rospy.get_param('~topic_scan', default='scan'),
             rospy.get_param('~topic_full', default='pessimistic'),
             rospy.get_param('~topic_update', default='pessimistic_updates')
@@ -156,7 +159,7 @@ def main():
             )
         )
         pm = PessimisticMapper(topics, view)
-        
+
         pm.runMapping(
             rospy.get_param('~rate_full', default=1),
             rospy.get_param('~rate_update', default=10)

@@ -44,7 +44,7 @@ def triangleMask(center, view):
 
 def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
     # use odom_msg
-    _pose = odom_msg.pose.pose
+    _pose = odom_msg.pose
     pos_xy = ar((_pose.position.x, _pose.position.y))
     roll, pitch, yaw = tf.transformations.euler_from_quaternion([_pose.orientation.x, _pose.orientation.y, _pose.orientation.z, _pose.orientation.w])
 
