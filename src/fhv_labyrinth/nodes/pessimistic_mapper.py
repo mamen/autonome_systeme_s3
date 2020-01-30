@@ -9,6 +9,7 @@ from sensor_msgs.msg import LaserScan
 
 from pessimistic_mask import createPessimisticMask
 
+show_view = True
 
 class PessimisticMapper(object):
     def __init__(self, topics, view):
@@ -27,6 +28,8 @@ class PessimisticMapper(object):
         # publishers
         self.pub_full = rospy.Publisher(_full, OccupancyGrid, queue_size=1, latch=True)
         self.pub_update = rospy.Publisher(_update, OccupancyGridUpdate, queue_size=1, latch=True)
+        if show_view:
+            self.pub_view = rospy.Publisher('current_view', OccupancyGrid, queue_size=1, latch=True)
 
         # subscribers
         self.sub_map = rospy.Subscriber(_map, OccupancyGrid, self.onMapMessage)
@@ -91,6 +94,19 @@ class PessimisticMapper(object):
 
                 # publish update
                 self.pub_update.publish(update)
+
+                if show_view:
+                    view_data = mask.astype(int)
+                    view_data[mask==False] = -1
+                    view_data[mask==True] = 0
+                    view = OccupancyGrid()
+                    view.header.frame_id = 'map'
+                    view.header.seq = seq_update
+                    view.header.stamp = now
+                    view.info = self.map_msg.info
+                    view.data = pessimistic.reshape(-1)
+
+                    self.pub_view.publish(view)
 
                 # increment sequence counter
                 seq_update += 1
