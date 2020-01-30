@@ -10,7 +10,7 @@ from geometry_msgs.msg import PoseStamped
 
 from pessimistic_mask import createPessimisticMask
 
-show_view = True
+show_view = False
 
 
 class PessimisticMapper(object):
@@ -64,74 +64,76 @@ class PessimisticMapper(object):
             if self.map_msg and self.odom_msg and self.scan_msg:
                 # create visible area mask
                 mask = createPessimisticMask(self.map_msg, self.odom_msg, self.scan_msg, self.view)
-                # mark visible area at current pose as visited (can be shown in map now)
-                self.pessimistic_map[mask == True] = False
+                
+                if mask.any():
+                    # mark visible area at current pose as visited (can be shown in map now)
+                    self.pessimistic_map[mask == True] = False
 
-                # bring data in shape
-                pessimistic = np.array(self.map_msg.data).reshape(self.dimension)
+                    # bring data in shape
+                    pessimistic = np.array(self.map_msg.data).reshape(self.dimension)
 
-                # mark pessimistic fields as Unknown
-                pessimistic[self.pessimistic_map == True] = -1
+                    # mark pessimistic fields as Unknown
+                    pessimistic[self.pessimistic_map == True] = -1
 
-                # determine region of update
-                xs, ys = np.where(mask)
+                    # determine region of update
+                    xs, ys = np.where(mask)
 
-                x = np.min(xs)
-                y = np.min(ys)
-                height = np.max(xs) - x + 1
-                width = np.max(ys) - y + 1
+                    x = np.min(xs)
+                    y = np.min(ys)
+                    height = np.max(xs) - x + 1
+                    width = np.max(ys) - y + 1
 
-                # get current time
-                now = rospy.Time.now()
+                    # get current time
+                    now = rospy.Time.now()
 
-                # prepare update message
-                update = OccupancyGridUpdate()
-                update.header.frame_id = 'map'
-                update.header.seq = seq_update
-                update.header.stamp = now
-                update.x = x
-                update.y = y
-                update.width = width
-                update.height = height
-                update.data = pessimistic[x:x + height, y:y + width].reshape(-1)
+                    # prepare update message
+                    update = OccupancyGridUpdate()
+                    update.header.frame_id = 'map'
+                    update.header.seq = seq_update
+                    update.header.stamp = now
+                    update.x = x
+                    update.y = y
+                    update.width = width
+                    update.height = height
+                    update.data = pessimistic[x:x + height, y:y + width].reshape(-1)
 
-                # publish update
-                self.pub_update.publish(update)
+                    # publish update
+                    self.pub_update.publish(update)
 
-                if show_view:
-                    view_data = mask.astype(int)
-                    view_data[mask == False] = -1
-                    view_data[mask == True] = 0
-                    view = OccupancyGrid()
-                    view.header.frame_id = 'map'
-                    view.header.seq = seq_update
-                    view.header.stamp = now
-                    view.info = self.map_msg.info
-                    view.data = view_data.reshape(-1)
+                    if show_view:
+                        view_data = mask.astype(int)
+                        view_data[mask == False] = -1
+                        view_data[mask == True] = 0
+                        view = OccupancyGrid()
+                        view.header.frame_id = 'map'
+                        view.header.seq = seq_update
+                        view.header.stamp = now
+                        view.info = self.map_msg.info
+                        view.data = view_data.reshape(-1)
 
-                    self.pub_view.publish(view)
+                        self.pub_view.publish(view)
 
-                # increment sequence counter
-                seq_update += 1
+                    # increment sequence counter
+                    seq_update += 1
 
-                # it's time for a full update
-                if counter == 0:
-                    # reset countdown
-                    counter = counter_limit
+                    # it's time for a full update
+                    if counter == 0:
+                        # reset countdown
+                        counter = counter_limit
 
-                    # perform full update
-                    full = OccupancyGrid()
-                    full.header.frame_id = 'map'
-                    full.header.seq = seq_full
-                    full.header.stamp = now
-                    full.info = self.map_msg.info
-                    full.data = pessimistic.reshape(-1)
+                        # perform full update
+                        full = OccupancyGrid()
+                        full.header.frame_id = 'map'
+                        full.header.seq = seq_full
+                        full.header.stamp = now
+                        full.info = self.map_msg.info
+                        full.data = pessimistic.reshape(-1)
 
-                    self.pub_full.publish(full)
+                        self.pub_full.publish(full)
 
-                    seq_full += 1
+                        seq_full += 1
 
-                counter -= 1
+                    counter -= 1
 
             r.sleep()
 
