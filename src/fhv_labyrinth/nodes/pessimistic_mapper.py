@@ -104,7 +104,7 @@ class PessimisticMapper(object):
                     view.header.seq = seq_update
                     view.header.stamp = now
                     view.info = self.map_msg.info
-                    view.data = pessimistic.reshape(-1)
+                    view.data = view_data.reshape(-1)
 
                     self.pub_view.publish(view)
 
