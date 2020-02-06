@@ -4,8 +4,8 @@
     <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
     <arg name="map_file" default="$(find fhv_labyrinth)/maps/labyrinth.yaml"/>
     <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
-    <arg name="topic_search" default="/search" />
-    <arg name="topic_found" default="/found" />
+    <arg name="topic_search" default="$(env COOP_SEARCHING_TOPIC)" />
+    <arg name="topic_found" default="$(env COOP_REACHED_TOPIC)" />
 
     <!-- Turtlebot3 -->
     <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
@@ -57,7 +57,7 @@
       <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
       <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
       <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_visitor.yaml" command="load" />
       <remap from="cmd_vel" to="/cmd_vel"/>
     </node>
 

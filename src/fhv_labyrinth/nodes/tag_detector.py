@@ -222,7 +222,7 @@ def main():
     try:
         rospy.init_node('tag_detector', anonymous=True)
         
-        topic_image = rospy.get_param('~topic_image', default='/raspicam_node/image/compressed')
+        topic_image = rospy.get_param('~topic_image', default='raspicam_node/image/compressed')
         filename = rospy.get_param('~tag_file', default='tags.csv')
 
         td = TagDetector(topic_image, filename)

@@ -96,6 +96,8 @@ class CoopTagFinder(object):
                 # Result of executing the action
                 result = self.client.get_result()
 
+                rospy.loginfo(result)
+
                 # TODO analyze result to determine whether goal was found or not
                 self.pub_found.publish(target)
 
