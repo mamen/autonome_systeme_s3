@@ -5,9 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /LaserScan1
-        - /Pose1
-        - /Path1
-        - /PessimisticMap1
+        - /Map1
         - /PessimisticMap1/Orientation1
         - /MarkerArray1
         - /MarkerArray2
@@ -41,7 +39,7 @@ Visualization Manager:
       Cell Size: 1
       Class: rviz/Grid
       Color: 160; 160; 164
-      Enabled: false
+      Enabled: true
       Line Style:
         Line Width: 0.0299999993
         Value: Lines
@@ -54,7 +52,7 @@ Visualization Manager:
       Plane: XY
       Plane Cell Count: 100
       Reference Frame: map
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
@@ -129,7 +127,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.0300000012
       Style: Flat Squares
-      Topic: /denmen/scan
+      Topic: scan
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -140,7 +138,7 @@ Visualization Manager:
       Draw Behind: false
       Enabled: true
       Name: Map
-      Topic: /denmen/map
+      Topic: map
       Unreliable: false
       Use Timestamp: false
       Value: true
@@ -156,7 +154,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.0500000007
       Shape: Arrow
-      Topic: /denmen/move_base/current_goal
+      Topic: move_base/current_goal
       Unreliable: false
       Value: true
     - Alpha: 1
@@ -188,13 +186,13 @@ Visualization Manager:
       Draw Behind: false
       Enabled: true
       Name: PessimisticMap
-      Topic: /denmen/pessimistic
+      Topic: pessimistic
       Unreliable: false
       Use Timestamp: false
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /denmen/explore/frontiers
+      Marker Topic: explore/frontiers
       Name: MarkerArray
       Namespaces:
         {}
@@ -202,7 +200,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /denmen/discovered_tags
+      Marker Topic: discovered_tags
       Name: MarkerArray
       Namespaces:
         {}

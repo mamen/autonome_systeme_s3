@@ -1,99 +1,111 @@
 <launch>
-  <group>
-    <!-- Arguments -->
-    <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
-    <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
-    <arg name="topic_cmd_vel" default="cmd_vel" />
-    <arg name="topic_move_base_vel" default="move_base_vel" />
-    <arg name="topic_spinner_vel" default="spinner_vel" />
-    <arg name="topic_image" default="raspicam_node/image/compressed" />
-    <arg name="topic_map" default="map" />
-    <arg name="topic_odom" default="robot_pose" />
-    <arg name="topic_scan" default="scan" />
-    <arg name="topic_full" default="pessimistic" />
-    <arg name="topic_update" default="pessimistic_update" />
-    <arg name="slam_methods" default="gmapping" />
+    <arg name="turtlebot" default="true" />
+    <arg name="slam" default="true" />
+    <arg name="tag_detector" default="false" />
+    <arg name="pessimistic_mapper" default="true" />
+    <arg name="mux" default="true" />
+    <arg name="move_base" default="true" />
+    <arg name="explore" default="false" />
+    <arg name="spinner" default="true" />
+    <arg name="rviz" default="true" />
 
-    <!-- Turtlebot3 -->
-    <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch">
-      <arg name="model" value="$(arg model)" />
-    </include>
+    <group>
+        <!-- Arguments -->
+        <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+        <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
+        <arg name="topic_cmd_vel" default="cmd_vel" />
+        <arg name="topic_move_base_vel" default="move_base_vel" />
+        <arg name="topic_spinner_vel" default="spinner_vel" />
+        <arg name="topic_image" default="raspicam_node/image/compressed" />
+        <arg name="topic_map" default="map" />
+        <arg name="topic_odom" default="robot_pose" />
+        <arg name="topic_scan" default="scan" />
+        <arg name="topic_full" default="pessimistic" />
+        <arg name="topic_update" default="pessimistic_update" />
+        <arg name="multi_robot_name" default="$(env ROS_NAMESPACE)" />
 
-    <!-- SLAM -->
-    <include file="$(find turtlebot3_slam)/launch/turtlebot3_$(arg slam_methods).launch">
-      <arg name="model" value="$(arg model)"/>
-    </include>
+        <!-- Turtlebot3 -->
+        <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" if="$(arg turtlebot)">
+            <arg name="model" value="$(arg model)" />
+            <arg name="multi_robot_name" value="$(arg multi_robot_name)" />
+        </include>
 
-    <!-- Camera Transformer -->
-    <node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />
+        <!-- SLAM -->
+        <include file="$(find turtlebot3_slam)/launch/turtlebot3_gmapping.launch" if="$(arg slam)">
+            <arg name="model" value="$(arg model)"/>
+        </include>
 
-    <!-- Tag Detector -->
-    <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen">
-      <param name="topic_image" value="$(arg topic_image)" />
-      <param name="tag_file" value="$(arg tag_file)" />
-    </node>
+        <!-- Camera Transformer -->
+        <!--<node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />-->
 
-    <!-- Pessimistic Mapping -->
-    <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" respawn="false" output="screen">
-      <param name="topic_map" value="$(arg topic_map)" />
-      <param name="topic_odom" value="$(arg topic_odom)" />
-      <param name="topic_scan" value="$(arg topic_scan)" />
-      <param name="topic_full" value="$(arg topic_full)" />
-      <param name="topic_update" value="$(arg topic_update)" />
-      <param name="sight_distance_min" value="6" />
-      <param name="sight_distance_max" value="20" />
-      <param name="sight_width_min" value="2" />
-      <param name="sight_width_max" value="15" />
-      <param name="rate_full" value="1" />
-      <param name="rate_update" value="10" />
-    </node>
+        <!-- Tag Detector -->
+        <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen" if="$(arg tag_detector)">
+            <param name="topic_image" value="$(arg topic_image)" />
+            <param name="tag_file" value="$(arg tag_file)" />
+        </node>
 
-    <!-- Multiplexer -->
-    <node pkg="topic_tools" type="mux" respawn="false" name="mux" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_spinner_vel)" />
+        <!-- Pessimistic Mapping -->
+        <node pkg="fhv_labyrinth" type="pessimistic_mapper.py" name="pessimistic_mapper" respawn="false" output="screen" if="$(arg pessimistic_mapper)">
+            <param name="topic_map" value="$(arg topic_map)" />
+            <param name="topic_odom" value="$(arg topic_odom)" />
+            <param name="topic_scan" value="$(arg topic_scan)" />
+            <param name="topic_full" value="$(arg topic_full)" />
+            <param name="topic_update" value="$(arg topic_update)" />
+            <param name="sight_distance_min" value="6" />
+            <param name="sight_distance_max" value="20" />
+            <param name="sight_width_min" value="2" />
+            <param name="sight_width_max" value="15" />
+            <param name="rate_full" value="1" />
+            <param name="rate_update" value="10" />
+        </node>
 
-    <!-- Movement -->
-    <node pkg="move_base" type="move_base" respawn="true" name="move_base">
-      <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
-      <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
-      <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
-      <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
-      <remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>
-    </node>
+        <!-- Multiplexer -->
+        <node pkg="topic_tools" type="mux" respawn="false" name="mux" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_spinner_vel)" if="$(arg mux)" />
 
-    <!-- Autonomous Exploration -->
-    <node pkg="explore_lite" type="explore" respawn="false" name="explore">
-      <!-- The name of the base frame of the robot. This is used for determining robot position on map. Mandatory. -->
-      <param name="robot_base_frame" value="base_link"/>
-      <!-- Specifies topic of source nav_msgs/OccupancyGrid. Mandatory. -->
-      <param name="costmap_topic" value="$(arg topic_full)"/>
-      <!-- <param name="costmap_topic" value="map"/> -->
-      <!-- Specifies topic of source map_msgs/OccupancyGridUpdate. Not necessary if source of map is always publishing full updates, i.e. does not provide this topic. -->
-      <param name="costmap_updates_topic" value="$(arg topic_update)"/>
-      <!-- Specifies whether or not publish visualized frontiers. -->
-      <param name="visualize" value="true"/>
-      <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
-      <param name="planner_frequency" value="0.1"/>
-      <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
-      <param name="progress_timeout" value="10.0"/>
-      <!-- Used for weighting frontiers. (distance to frontier). -->
-      <param name="potential_scale" value="0.2"/>
-      <!-- Used for weighting frontiers. (frontier size). -->
-      <param name="gain_scale" value="0.3"/>
-      <!-- Transform tolerance to use when transforming robot pose. -->
-      <param name="transform_tolerance" value="0.5"/>
-      <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
-      <param name="min_frontier_size" value="0.1"/>
-    </node>
+        <!-- Movement -->
+        <node pkg="move_base" type="move_base" respawn="true" name="move_base" if="$(arg move_base)">
+            <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+            <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
+            <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
+            <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
+            <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+            <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
+            <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+            <remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>
+        </node>
 
-    <!-- Spin once at start -->
-    <node pkg="fhv_labyrinth" type="spinner.py" name="spinner" respawn="false">
-      <param name="topic" value="$(arg topic_spinner_vel)" />
-    </node>
+        <!-- Autonomous Exploration -->
+        <node pkg="explore_lite" type="explore" respawn="false" name="explore" if="$(arg explore)">
+            <!-- The name of the base frame of the robot. This is used for determining robot position on map. Mandatory. -->
+            <param name="robot_base_frame" value="base_link"/>
+            <!-- Specifies topic of source nav_msgs/OccupancyGrid. Mandatory. -->
+            <param name="costmap_topic" value="$(arg topic_full)"/>
+            <!-- <param name="costmap_topic" value="map"/> -->
+            <!-- Specifies topic of source map_msgs/OccupancyGridUpdate. Not necessary if source of map is always publishing full updates, i.e. does not provide this topic. -->
+            <param name="costmap_updates_topic" value="$(arg topic_update)"/>
+            <!-- Specifies whether or not publish visualized frontiers. -->
+            <param name="visualize" value="true"/>
+            <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
+            <param name="planner_frequency" value="0.1"/>
+            <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
+            <param name="progress_timeout" value="10.0"/>
+            <!-- Used for weighting frontiers. (distance to frontier). -->
+            <param name="potential_scale" value="0.2"/>
+            <!-- Used for weighting frontiers. (frontier size). -->
+            <param name="gain_scale" value="0.3"/>
+            <!-- Transform tolerance to use when transforming robot pose. -->
+            <param name="transform_tolerance" value="0.5"/>
+            <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
+            <param name="min_frontier_size" value="0.1"/>
+            <!--<remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>-->
+        </node>
 
-    <!-- Visualzation -->
-    <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find fhv_labyrinth)/rviz/discover.rviz"/>
-  </group>
+        <!-- Spin once at start -->
+        <node pkg="fhv_labyrinth" type="spinner.py" name="spinner" respawn="false" if="$(arg spinner)">
+            <param name="topic" value="$(arg topic_spinner_vel)" />
+        </node>
+
+        <!-- Visualzation -->
+        <node pkg="rviz" type="rviz" name="rviz" required="true" args="-d $(find fhv_labyrinth)/rviz/discover.rviz" if="$(arg rviz)"/>
+    </group>
 </launch>
