@@ -1,11 +1,11 @@
 <launch>
     <arg name="turtlebot" default="true" />
     <arg name="slam" default="true" />
-    <arg name="tag_detector" default="false" />
+    <arg name="tag_detector" default="true" />
     <arg name="pessimistic_mapper" default="true" />
     <arg name="mux" default="true" />
     <arg name="move_base" default="true" />
-    <arg name="explore" default="false" />
+    <arg name="explore" default="true" />
     <arg name="spinner" default="true" />
     <arg name="rviz" default="true" />
 
@@ -22,12 +22,10 @@
         <arg name="topic_scan" default="scan" />
         <arg name="topic_full" default="pessimistic" />
         <arg name="topic_update" default="pessimistic_update" />
-        <arg name="multi_robot_name" default="$(env ROS_NAMESPACE)" />
 
         <!-- Turtlebot3 -->
         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" if="$(arg turtlebot)">
             <arg name="model" value="$(arg model)" />
-            <arg name="multi_robot_name" value="$(arg multi_robot_name)" />
         </include>
 
         <!-- SLAM -->

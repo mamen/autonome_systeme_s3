@@ -313,7 +313,7 @@ class Detection:
                         self.TAGS.append(tag)
 
                         marker = Marker()
-                        marker.header.frame_id = "/map"
+                        marker.header.frame_id = "map"
                         marker.type = marker.SPHERE
                         marker.action = marker.ADD
                         marker.scale.x = 0.2
