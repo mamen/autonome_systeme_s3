@@ -6,7 +6,7 @@ import cv2 as cv
 import cv_bridge as cvb
 
 from sensor_msgs.msg import CompressedImage
-from geometry_msgs.msg import Point, PointStamped
+from geometry_msgs.msg import Point, PointStamped, Twist
 from visualization_msgs.msg import MarkerArray, Marker
 
 # debug
@@ -151,7 +151,7 @@ class TagDetector(object):
 
             # nothing to do if no keypoints available
             if not len(keypoints):
-                print('no keypoints found')
+                rospy.loginfo('[TAG_DETECTOR] no keypoints found')
                 return
             
             # sort by size
@@ -218,17 +218,38 @@ class TagDetector(object):
                 self.performCalculation()
             rate.sleep()
 
+
+def stopWheels():
+    twist = Twist()
+
+    twist.linear.x = 0.0
+    twist.linear.y = 0.0
+    twist.linear.z = 0.0
+
+    twist.angular.x = 0.0
+    twist.angular.y = 0.0
+    twist.angular.z = 0.0
+
+    pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
+
+    pub.publish(twist)
+
+
 def main():
     try:
         rospy.init_node('tag_detector', anonymous=True)
         
-        topic_image = rospy.get_param('~topic_image', default='raspicam_node/image/compressed')
-        filename = rospy.get_param('~tag_file', default='tags.csv')
+        rospy.on_shutdown(stopWheels)
+
+        topic_image = rospy.get_param('topic_image', default='raspicam_node/image/compressed')
+        filename = rospy.get_param('tag_file', default='tags.csv')
 
         td = TagDetector(topic_image, filename)
         td.spin()
     except rospy.ROSInterruptException:
+        stopWheels()
         pass
+
 
 if __name__ == '__main__':
     main()

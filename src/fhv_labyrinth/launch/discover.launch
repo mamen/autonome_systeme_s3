@@ -34,7 +34,7 @@
         </include>
 
         <!-- Camera Transformer -->
-        <!--<node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />-->
+        <node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />
 
         <!-- Tag Detector -->
         <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen" if="$(arg tag_detector)">
