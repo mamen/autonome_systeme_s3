@@ -2,22 +2,23 @@
 import rospy
 import actionlib
 import csv
+import numpy as np
 
 # Brings in the .action file and messages used by the move base action
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import PointStamped
 from std_msgs.msg import Header
 
 from std_srvs.srv import Empty, EmptyRequest
 
-# TODO: use correct type here
-coop_data_class = Point
+coop_data_class = PointStamped
 
 class CoopTagFinder(object):
-    def __init__(self, tag_positions, search_topic, found_topic):
-        self.search_list = set(tag_positions)
-        self.searching_list = set()
-        self.found_list = set()
+    def __init__(self, tag_positions, search_topic, found_topic, tolerance):
+        self.search_list = [tag_positions]
+        self.searching_list = []
+        self.found_list = []
+        self.tolerance = tolerance
 
         self.pub_search = rospy.Publisher(search_topic, coop_data_class, queue_size=2)
         self.pub_found = rospy.Publisher(found_topic, coop_data_class, queue_size=2)
@@ -39,18 +40,40 @@ class CoopTagFinder(object):
         return next(iter(next_search_list))
 
     def onSearch(self, msg):
-        # TODO add cancel behavior
-        # TODO add tolerance to identify tag
-        
-        searching = (msg.x, msg.y)
-        self.search_list.remove(searching)
-        self.searching_list.add(searching)
+        # convert coop message into private format
+        t_xy = msg.point.x, msg.point.y
+
+        # find matching point in search list
+        first_or_default = next(
+            (xy for xy in self.search_list if np.linalg.norm(np.array(xy)-t_xy) <= self.tolerance),
+            None
+        )
+
+        if first_or_default:
+            self.search_list.remove(first_or_default)
+            self.searching_list.append(first_or_default)
+        else:
+            # other robot found a tag we didn't find... who cares?
+            # TODO add cancel behavior
+            pass
 
     def onFound(self, msg):
-        # TODO add tolerance to identify tag
-        found = (msg.x, msg.y)
-        self.searching_list.remove(found)
-        self.found_list.add(found)
+        # convert coop message into private format
+        t_xy = msg.point.x, msg.point.y
+
+        # find matching point in searching list
+        first_or_default = next(
+            (xy for xy in self.searching_list if np.linalg.norm(np.array(xy)-t_xy) <= self.tolerance),
+            None
+        )
+
+        if first_or_default:
+            self.searching_list.remove(first_or_default)
+            self.found_list.append(first_or_default)
+        else:
+            # other robot found a tag we didn't find... who cares?
+            # TODO add cancel behavior
+            pass
 
     def localize(self):
         rospy.wait_for_service('/global_localization')
@@ -65,8 +88,14 @@ class CoopTagFinder(object):
         self.localize()
 
         while not rospy.is_shutdown() and not self.done():
+            # get next goal in personal data format (x y map coordinates)
             (next_x, next_y) = self.next_target()
-            target = Point(x=next_x, y=next_y)
+
+            target = PointStamped()
+            target.header.frame_id = 'map'
+            target.header.stamp = rospy.Time.now()
+            target.point.x = next_x
+            target.point.y = next_y
 
             # communicate to others that you look after this point
             self.pub_search.publish(target)
@@ -79,7 +108,7 @@ class CoopTagFinder(object):
             goal.target_pose.header.stamp = rospy.Time.now()
             
             # set position
-            goal.target_pose.pose.position = target
+            goal.target_pose.pose.position = target.point
 
             # set orientation
             goal.target_pose.pose.orientation.w = 1.0
@@ -105,9 +134,10 @@ def main():
     try:
         rospy.init_node('coop_tag_finder', anonymous=True)
 
-        search_topic = rospy.get_param('~search_topic', default='/search')
-        found_topic = rospy.get_param('~found_topic', default='/found')
+        search_topic = rospy.get_param('~search_topic', default='/coop_tag/searching')
+        found_topic = rospy.get_param('~found_topic', default='/coop_tag/reached')
         filename = rospy.get_param('~filename', default='tags.csv')
+        tolerance = rospy.get_param('~tolerance', default=0.4)
 
         with open(filename) as f:
             r = csv.reader(f, delimiter=';')
@@ -117,7 +147,7 @@ def main():
 
             tag_positions = [(float(x), float(y)) for _id, x, y, z in r]
         
-        ctf = CoopTagFinder(tag_positions, search_topic, found_topic)
+        ctf = CoopTagFinder(tag_positions, search_topic, found_topic, tolerance)
         ctf.findAll()
     except rospy.ROSInterruptException:
         pass
