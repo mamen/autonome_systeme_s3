@@ -19,6 +19,10 @@ hz = 1
 LOWER_LIMIT = np.array([20, 50, 50])
 UPPER_LIMIT = np.array([100, 255, 255])
 
+# PINK
+LOWER_LIMIT = np.array([150, 100, 100])
+UPPER_LIMIT = np.array([170, 240, 255])
+
 # Blob detector
 params = cv.SimpleBlobDetector_Params()
 params.filterByColor = True
