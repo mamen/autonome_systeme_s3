@@ -68,7 +68,7 @@
             <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
             <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
             <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-            <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model).yaml" command="load" />
+            <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_discover.yaml" command="load" />
             <remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>
         </node>
 
@@ -88,9 +88,9 @@
             <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
             <param name="progress_timeout" value="10.0"/>
             <!-- Used for weighting frontiers. (distance to frontier). -->
-            <param name="potential_scale" value="0.2"/>
+            <param name="potential_scale" value="2.0"/>
             <!-- Used for weighting frontiers. (frontier size). -->
-            <param name="gain_scale" value="0.3"/>
+            <param name="gain_scale" value="0.1"/>
             <!-- Transform tolerance to use when transforming robot pose. -->
             <param name="transform_tolerance" value="0.5"/>
             <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
