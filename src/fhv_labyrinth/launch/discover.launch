@@ -63,6 +63,7 @@
         <!-- Movement -->
         <node pkg="move_base" type="move_base" respawn="true" name="move_base" if="$(arg move_base)">
             <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+            <param name="base_global_planner" value="global_planner/GlobalPlanner" />
             <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
             <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
             <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
@@ -86,7 +87,7 @@
             <!-- Rate in Hz at which new frontiers will computed and goal reconsidered. -->
             <param name="planner_frequency" value="0.1"/>
             <!-- Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned. -->
-            <param name="progress_timeout" value="10.0"/>
+            <param name="progress_timeout" value="5.0"/>
             <!-- Used for weighting frontiers. (distance to frontier). -->
             <param name="potential_scale" value="2.0"/>
             <!-- Used for weighting frontiers. (frontier size). -->
