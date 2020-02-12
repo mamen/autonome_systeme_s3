@@ -2,6 +2,7 @@
   <group>
     <!-- Arguments -->
     <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+    <arg name="phase" default="visitor" doc="phase [discover, visitor]"/>
     <arg name="map_file" default="$(find fhv_labyrinth)/maps/labyrinth.yaml"/>
     <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
     <arg name="topic_search" default="$(env COOP_SEARCHING_TOPIC)" />
@@ -51,13 +52,26 @@
 
     <!-- Movement -->
     <node pkg="move_base" type="move_base" respawn="true" name="move_base">
+      <!-- Global Planner -->
+      <param name="base_global_planner" value="global_planner/GlobalPlanner" />
+      <rosparam file="$(find fhv_labyrinth)/param/global_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
+      
+      <!-- Local Planner -->
       <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
+      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
+
+      <!-- Global Costmap -->
       <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
+      <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+
+      <!-- Local Costmap -->
       <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
       <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+
+      <!-- Move Base -->
       <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-      <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_visitor.yaml" command="load" />
+      
+      <!-- Renamings -->
       <remap from="cmd_vel" to="/cmd_vel"/>
     </node>
 
