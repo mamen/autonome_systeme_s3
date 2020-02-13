@@ -1,7 +1,6 @@
 <launch>
     <arg name="turtlebot" default="true" />
     <arg name="camera" default="true" />
-    <arg name="pose" default="true" />
 
     <group>
         <!-- Arguments -->
@@ -10,8 +9,6 @@
         <arg name="tf_prefix" default="$(env ROS_NAMESPACE)" />
         <arg name="frame_prefix" default="$(arg tf_prefix)/" />
 
-        <arg name="frame_map" default="$(arg frame_prefix)map"/>
-        <arg name="frame_base_link" default="$(arg frame_prefix)base_link"/>
         <arg name="frame_base_scan" default="$(arg frame_prefix)base_scan"/>
         
         <!-- Turtlebot3 -->
@@ -23,12 +20,5 @@
 
         <!-- RaspiCam -->
         <include file="$(find raspicam_node)/launch/camerav2_1280x720.launch" if="$(arg camera)" />
-
-        <!-- PosePublisher -->
-        <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher" respawn="true" output="screen" if="$(arg pose)">
-            <param name="map_frame" value="$(arg frame_map)" />
-            <param name="base_frame" value="$(arg frame_base_link)" />
-            <param name="publish_frequency" value="10" />
-        </node>
     </group>
 </launch>
