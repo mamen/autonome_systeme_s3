@@ -14,8 +14,11 @@ show_view = False
 
 
 class PessimisticMapper(object):
-    def __init__(self, topics, view):
+    def __init__(self, topics, frames, view):
         _map, _odom, _scan, _full, _update = topics
+        
+        # frames
+        self.frame_map, self.frame_scan = frames
 
         # message data incoming
         self.map_msg = None
@@ -88,7 +91,7 @@ class PessimisticMapper(object):
 
                     # prepare update message
                     update = OccupancyGridUpdate()
-                    update.header.frame_id = 'map'
+                    update.header.frame_id = self.frame_map
                     update.header.seq = seq_update
                     update.header.stamp = now
                     update.x = x
@@ -105,7 +108,7 @@ class PessimisticMapper(object):
                         view_data[mask == False] = -1
                         view_data[mask == True] = 0
                         view = OccupancyGrid()
-                        view.header.frame_id = 'map'
+                        view.header.frame_id = self.frame_map
                         view.header.seq = seq_update
                         view.header.stamp = now
                         view.info = self.map_msg.info
@@ -123,7 +126,7 @@ class PessimisticMapper(object):
 
                         # perform full update
                         full = OccupancyGrid()
-                        full.header.frame_id = 'map'
+                        full.header.frame_id = self.frame_map
                         full.header.seq = seq_full
                         full.header.stamp = now
                         full.info = self.map_msg.info
@@ -150,6 +153,11 @@ def main():
             rospy.get_param('~topic_update', default='pessimistic_updates')
         )
 
+        frames = (
+            rospy.get_param('~frame_map', default='map'),
+            rospy.get_param('~frame_scan', default='scan')
+        )
+
         view = (
             (
                 rospy.get_param('~sight_distance_min', default=6),
@@ -160,7 +168,7 @@ def main():
                 rospy.get_param('~sight_width_max', default=15)
             )
         )
-        pm = PessimisticMapper(topics, view)
+        pm = PessimisticMapper(topics, frames, view)
 
         pm.runMapping(
             rospy.get_param('~rate_full', default=1),

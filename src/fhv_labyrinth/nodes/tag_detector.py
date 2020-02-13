@@ -72,26 +72,10 @@ H = cv.findHomography(img_pts, real_pts)[0]
 # tag config
 MIN_DISTANCE_BETWEEN_TAGS = 0.6
 
-def tag2Marker(_id, tag):
-    print(id, tag.x, tag.y)
-    marker = Marker()
-    marker.header.frame_id = 'map'
-    marker.type = marker.SPHERE
-    marker.action = marker.ADD
-    marker.scale.x = 0.2
-    marker.scale.y = 0.2
-    marker.scale.z = 0.2
-    marker.color.a = 1.0
-    marker.color.r = 1.0
-    marker.color.g = 1.0
-    marker.color.b = 0.0
-    marker.pose.position = tag
-    marker.pose.orientation.w = 1.0
-    marker.id = _id
-    return marker
-
 class TagDetector(object):
-    def __init__(self, topic_image, filename):
+    def __init__(self, topic_image, filename, frames):
+        self.frame_map, self.frame_base_link = frames
+
         self.filename = filename
         
         self.image_msg = None
@@ -171,12 +155,12 @@ class TagDetector(object):
             _x, _y, _ = result # in meter
 
             ps = PointStamped()
-            ps.header.frame_id = 'camera_link'
+            ps.header.frame_id = self.frame_base_link
             # ps.header.stamp = rospy.Time(0) 
             ps.header.stamp = image_msg.header.stamp
             ps.point = Point(x=_x, y=_y)
             
-            ps_map = self.tl.transformPoint('map', ps)
+            ps_map = self.tl.transformPoint(self.frame_map, ps)
 
             tag = ps_map.point
         
@@ -191,7 +175,7 @@ class TagDetector(object):
 
             if show_tags:
                 marker = Marker()
-                marker.header.frame_id = 'map'
+                marker.header.frame_id = self.frame_map
                 marker.type = marker.SPHERE
                 marker.action = marker.ADD
                 marker.scale.x = 0.2
@@ -248,7 +232,12 @@ def main():
         topic_image = rospy.get_param('topic_image', default='raspicam_node/image/compressed')
         filename = rospy.get_param('tag_file', default='tags.csv')
 
-        td = TagDetector(topic_image, filename)
+        frames = (
+            rospy.get_param('~frame_map', default='map'),
+            rospy.get_param('~frame_base_link', default='base_link')
+        )
+
+        td = TagDetector(topic_image, filename, frames)
         td.spin()
     except rospy.ROSInterruptException:
         stopWheels()

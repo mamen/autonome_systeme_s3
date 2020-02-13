@@ -16,6 +16,15 @@
 
         <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
         
+        <arg name="tf_prefix" default="$(env ROS_NAMESPACE)" />
+        <arg name="frame_prefix" default="$(arg tf_prefix)/" />
+
+        <arg name="frame_map" default="$(arg frame_prefix)map"/>
+        <arg name="frame_odom" default="$(arg frame_prefix)odom"/>
+        <arg name="frame_scan" default="$(arg frame_prefix)scan"/>
+        <arg name="frame_base_link" default="$(arg frame_prefix)base_link"/>
+        <arg name="frame_base_footprint" default="$(arg frame_prefix)base_footprint"/>
+
         <arg name="topic_cmd_vel" default="cmd_vel" />
         <arg name="topic_move_base_vel" default="move_base_vel" />
         <arg name="topic_spinner_vel" default="spinner_vel" />
@@ -29,21 +38,25 @@
         <!-- Turtlebot3 -->
         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" if="$(arg turtlebot)">
             <arg name="model" value="$(arg model)" />
+            <arg name="multi_robot_name" value="$(arg tf_prefix)" />
         </include>
 
         <!-- SLAM -->
         <include file="$(find turtlebot3_slam)/launch/turtlebot3_gmapping.launch" if="$(arg slam)">
             <arg name="model" value="$(arg model)"/>
+            <arg name="set_base_frame" default="$(arg frame_base_footprint)"/>
+            <arg name="set_odom_frame" default="$(arg frame_odom)"/>
+            <arg name="set_map_frame"  default="$(arg frame_map)"/>
         </include>
-
-        <!-- Camera Transformer -->
-        <node pkg="fhv_labyrinth" type="tf_cam.py" name="tf_cam" respawn="true" />
 
         <!-- Tag Detector -->
         <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen" if="$(arg tag_detector)">
             <param name="topic_image" value="$(arg topic_image)" />
 
             <param name="tag_file" value="$(arg tag_file)" />
+
+            <param name="frame_map" value="$(arg frame_map)" />
+            <param name="frame_base_link" value="$(arg frame_base_link)" />
         </node>
 
         <!-- Pessimistic Mapping -->
@@ -53,6 +66,10 @@
             <param name="topic_scan" value="$(arg topic_scan)" />
             <param name="topic_full" value="$(arg topic_full)" />
             <param name="topic_update" value="$(arg topic_update)" />
+
+            <param name="frame_map" value="$(arg frame_map)" />
+            <param name="frame_scan" value="$(arg frame_scan)" />
+
             <param name="sight_distance_min" value="6" />
             <param name="sight_distance_max" value="20" />
             <param name="sight_width_min" value="2" />
@@ -92,7 +109,7 @@
         <!-- Autonomous Exploration -->
         <node pkg="explore_lite" type="explore" respawn="false" name="explore" if="$(arg explore)">
             <!-- The name of the base frame of the robot. This is used for determining robot position on map. Mandatory. -->
-            <param name="robot_base_frame" value="base_link"/>
+            <param name="robot_base_frame" value="$(arg frame_base_link)"/>
             <!-- Specifies topic of source nav_msgs/OccupancyGrid. Mandatory. -->
             <param name="costmap_topic" value="$(arg topic_full)"/>
             <!-- <param name="costmap_topic" value="map"/> -->
@@ -112,7 +129,6 @@
             <param name="transform_tolerance" value="0.5"/>
             <!-- Minimum size of the frontier to consider the frontier as the exploration goal. In meters. -->
             <param name="min_frontier_size" value="0.1"/>
-            <!--<remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>-->
         </node>
 
         <!-- Spin once at start -->
