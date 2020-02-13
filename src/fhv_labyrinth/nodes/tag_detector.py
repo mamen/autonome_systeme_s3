@@ -230,7 +230,7 @@ def main():
         rospy.on_shutdown(stopWheels)
 
         topic_image = rospy.get_param('topic_image', default='raspicam_node/image/compressed')
-        filename = rospy.get_param('tag_file', default='tags.csv')
+        filename = rospy.get_param('~tag_file', default='tags.csv')
 
         frames = (
             rospy.get_param('~frame_map', default='map'),
