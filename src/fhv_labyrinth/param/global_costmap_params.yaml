@@ -16,8 +16,8 @@ global_costmap:
     publish_frequency: 3.0
     transform_tolerance: 10.0
 
-    global_frame: map
-    robot_base_frame: base_link
+    global_frame: denmen/map
+    robot_base_frame: denmen/base_link
     rolling_window: false
     track_unknown_space: true
 
