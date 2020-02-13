@@ -14,11 +14,13 @@ from std_srvs.srv import Empty, EmptyRequest
 coop_data_class = PointStamped
 
 class CoopTagFinder(object):
-    def __init__(self, tag_positions, search_topic, found_topic, tolerance):
+    def __init__(self, tag_positions, search_topic, found_topic, tolerance, frame_map):
         self.search_list = [tag_positions]
         self.searching_list = []
         self.found_list = []
         self.tolerance = tolerance
+
+        self.frame_map = frame_map
 
         self.pub_search = rospy.Publisher(search_topic, coop_data_class, queue_size=2)
         self.pub_found = rospy.Publisher(found_topic, coop_data_class, queue_size=2)
@@ -83,7 +85,6 @@ class CoopTagFinder(object):
     def findAll(self):
         if self.done():
             return
-
         # activate global localization (we can be anywhere)
         self.localize()
 
@@ -92,7 +93,7 @@ class CoopTagFinder(object):
             (next_x, next_y) = self.next_target()
 
             target = PointStamped()
-            target.header.frame_id = 'map'
+            target.header.frame_id = self.frame_map
             target.header.stamp = rospy.Time.now()
             target.point.x = next_x
             target.point.y = next_y
@@ -104,7 +105,7 @@ class CoopTagFinder(object):
             goal = MoveBaseGoal()
             
             # set header
-            goal.target_pose.header.frame_id = 'map'
+            goal.target_pose.header.frame_id = self.frame_map
             goal.target_pose.header.stamp = rospy.Time.now()
             
             # set position
@@ -132,12 +133,17 @@ class CoopTagFinder(object):
 
 def main():
     try:
+
         rospy.init_node('coop_tag_finder', anonymous=True)
 
         search_topic = rospy.get_param('~search_topic', default='/coop_tag/searching')
         found_topic = rospy.get_param('~found_topic', default='/coop_tag/reached')
         filename = rospy.get_param('~filename', default='tags.csv')
         tolerance = rospy.get_param('~tolerance', default=0.4)
+
+
+
+        frame_map = rospy.get_param('~frame_map', default='map')
 
         with open(filename) as f:
             r = csv.reader(f, delimiter=';')
@@ -147,10 +153,11 @@ def main():
 
             tag_positions = [(float(x), float(y)) for _id, x, y, z in r]
         
-        ctf = CoopTagFinder(tag_positions, search_topic, found_topic, tolerance)
+        ctf = CoopTagFinder(tag_positions, search_topic, found_topic, tolerance, frame_map)
         ctf.findAll()
     except rospy.ROSInterruptException:
         pass
+
 
 if __name__ == '__main__':
     main()

@@ -1,5 +1,3 @@
-<!-- TODO: namespace tf -->
-<!-- TODO: namespace visitor topics -->
 <launch>
     <arg name="turtlebot" default="true" />
     <arg name="mapserver" default="true" />
@@ -16,6 +14,15 @@
 
         <arg name="map_file" default="$(find fhv_labyrinth)/maps/labyrinth.yaml"/>
         <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
+
+        <arg name="tf_prefix" default="$(env ROS_NAMESPACE)" />
+        <arg name="frame_prefix" default="$(arg tf_prefix)/" />
+
+        <arg name="frame_map" default="$(arg frame_prefix)map"/>
+        <arg name="frame_odom" default="$(arg frame_prefix)odom"/>
+        <arg name="frame_scan" default="$(arg frame_prefix)scan"/>
+        <arg name="frame_base_link" default="$(arg frame_prefix)base_link"/>
+        <arg name="frame_base_footprint" default="$(arg frame_prefix)base_footprint"/>
         
         <arg name="topic_search" default="$(env COOP_SEARCHING_TOPIC)" />
         <arg name="topic_found" default="$(env COOP_REACHED_TOPIC)" />
@@ -26,10 +33,13 @@
         <!-- Turtlebot3 -->
         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" if="$(arg turtlebot)">
             <arg name="model" value="$(arg model)" />
+            <arg name="multi_robot_name" value="$(arg tf_prefix)" />
         </include>
 
         <!-- Load Map -->
-        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" if="$(arg mapserver)"/>
+        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" if="$(arg mapserver)">
+            <param name="frame_id" value="$(arg frame_map)"/>
+        </node>
 
         <!-- Localization -->
         <node pkg="amcl" type="amcl" name="amcl" if="$(arg localization)">
@@ -61,8 +71,9 @@
             <param name="odom_alpha2"               value="0.1"/>
             <param name="odom_alpha3"               value="0.1"/>
             <param name="odom_alpha4"               value="0.1"/>
-            <param name="odom_frame_id"             value="odom"/>
-            <param name="base_frame_id"             value="base_footprint"/>
+            <param name="odom_frame_id"             value="$(arg frame_odom)"/>
+            <param name="base_frame_id"             value="$(arg frame_base_footprint)"/>
+            <param name="global_frame_id"           value="$(arg frame_map)"/>
         </node>
 
         <!-- Multiplexer -->
@@ -100,6 +111,8 @@
             <param name="topic_search" value="$(arg topic_search)" />
             <param name="topic_found" value="$(arg topic_found)" />
             <param name="topic_vel" value="$(arg topic_finder_vel)" />
+
+            <param name="frame_map" value="$(arg frame_map)" />
         </node>
 
         <!-- Visualzation -->
