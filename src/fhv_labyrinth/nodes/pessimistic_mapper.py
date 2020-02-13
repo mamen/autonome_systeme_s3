@@ -59,8 +59,8 @@ class PessimisticMapper(object):
         while not rospy.is_shutdown():
             if self.map_msg and self.scan_msg:
                 try:
-                    point, quaternion = self.tl.loopkupTransform(self.frame_map, self.frame_base_link, rospy.Time())                
-                    pos_xy = ar(point[:2])
+                    point, quaternion = self.tl.lookupTransform(self.frame_map, self.frame_base_link, rospy.Time())
+                    pos_xy = np.array(point[:2])
                     yaw = tf.transformations.euler_from_quaternion(quaternion)[2]
 
                     # create visible area mask
