@@ -29,8 +29,8 @@ class CoopTagFinder(object):
         self.sub_found = rospy.Subscriber(found_topic, coop_data_class, self.onFound)
 
         # Create an action client called "move_base" with action definition file "MoveBaseAction"
-        self.client = actionlib.SimpleActionClient('move_base', MoveBaseAction)
-            
+        self.client = actionlib.SimpleActionClient('denmen/move_base', MoveBaseAction)
+
         # Waits until the action server has started up and started listening for goals.
         self.client.wait_for_server()
 
@@ -83,10 +83,15 @@ class CoopTagFinder(object):
         amcl_global_localization(EmptyRequest())
 
     def findAll(self):
+
+        rospy.loginfo('fooo {}'.format(self.done()))
+
         if self.done():
             return
         # activate global localization (we can be anywhere)
         self.localize()
+
+        rospy.loginfo('baaar')
 
         while not rospy.is_shutdown() and not self.done():
             # get next goal in personal data format (x y map coordinates)
@@ -133,16 +138,12 @@ class CoopTagFinder(object):
 
 def main():
     try:
-
         rospy.init_node('coop_tag_finder', anonymous=True)
 
         search_topic = rospy.get_param('~search_topic', default='/coop_tag/searching')
         found_topic = rospy.get_param('~found_topic', default='/coop_tag/reached')
         filename = rospy.get_param('~filename', default='tags.csv')
         tolerance = rospy.get_param('~tolerance', default=0.4)
-
-
-
         frame_map = rospy.get_param('~frame_map', default='map')
 
         with open(filename) as f:

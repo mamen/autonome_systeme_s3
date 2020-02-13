@@ -37,12 +37,12 @@
         </include>
 
         <!-- Load Map -->
-        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" if="$(arg mapserver)">
+        <node pkg="map_server" name="map_server" type="map_server" args="$(arg map_file)" output="screen" if="$(arg mapserver)">
             <param name="frame_id" value="$(arg frame_map)"/>
         </node>
 
         <!-- Localization -->
-        <node pkg="amcl" type="amcl" name="amcl" if="$(arg localization)">
+        <node pkg="amcl" type="amcl" name="amcl" output="screen" if="$(arg localization)">
             <param name="min_particles"             value="500"/>
             <param name="max_particles"             value="3000"/>
             <param name="kld_err"                   value="0.02"/>
@@ -77,10 +77,10 @@
         </node>
 
         <!-- Multiplexer -->
-        <node pkg="topic_tools" type="mux" respawn="false" name="mux" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_finder_vel)" if="$(arg mux)" />
+        <node pkg="topic_tools" type="mux" respawn="false" name="mux" args="$(arg topic_cmd_vel) $(arg topic_move_base_vel) $(arg topic_finder_vel)" output="screen" if="$(arg mux)" />
 
         <!-- Movement -->
-        <node pkg="move_base" type="move_base" respawn="true" name="move_base" if="$(arg move_base)">
+        <node pkg="move_base" type="move_base" respawn="true" name="move_base" output="screen" if="$(arg move_base)">
             <!-- Global Planner -->
             <param name="base_global_planner" value="global_planner/GlobalPlanner" />
             <rosparam file="$(find fhv_labyrinth)/param/global_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
@@ -105,7 +105,7 @@
         </node>
 
         <!-- Coop Tag Finder -->
-        <node pkg="fhv_labyrinth" type="coop_tag_finder.py" name="coop_tag_finder" respawn="false" if="$(arg coop_tag_finder)">
+        <node pkg="fhv_labyrinth" type="coop_tag_finder.py" name="coop_tag_finder" output="screen" respawn="false" if="$(arg coop_tag_finder)">
             <param name="filename" value="$(arg tag_file)"/>
 
             <param name="topic_search" value="$(arg topic_search)" />
