@@ -13,7 +13,9 @@
         <!-- Arguments -->
         <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
         <arg name="phase" default="discover" doc="phase [discover, visitor]"/>
+
         <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
+        
         <arg name="topic_cmd_vel" default="cmd_vel" />
         <arg name="topic_move_base_vel" default="move_base_vel" />
         <arg name="topic_spinner_vel" default="spinner_vel" />
@@ -40,6 +42,7 @@
         <!-- Tag Detector -->
         <node pkg="fhv_labyrinth" type="tag_detector.py" name="tag_detector" respawn="false" output="screen" if="$(arg tag_detector)">
             <param name="topic_image" value="$(arg topic_image)" />
+
             <param name="tag_file" value="$(arg tag_file)" />
         </node>
 
