@@ -1,6 +1,5 @@
 from PIL import Image,ImageDraw
 import numpy as np
-import tf
 
 pi = np.pi
 inf = np.inf
@@ -42,12 +41,7 @@ def triangleMask(center, view):
     pts = ar((p1, p2, p3))
     return pts
 
-def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
-    # use odom_msg
-    _pose = odom_msg.pose
-    pos_xy = ar((_pose.position.x, _pose.position.y))
-    roll, pitch, yaw = tf.transformations.euler_from_quaternion([_pose.orientation.x, _pose.orientation.y, _pose.orientation.z, _pose.orientation.w])
-
+def createPessimisticMask(map_msg, scan_msg, view, pos_xy, yaw):
     # use map_msg
     _info = map_msg.info
     origin_xy = ar((_info.origin.position.x, _info.origin.position.y))
@@ -60,19 +54,13 @@ def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
     ranges = ar(_scan.ranges)
     angles = arange(_scan.angle_min, _scan.angle_max + _scan.angle_increment / 2, _scan.angle_increment)
     
-    # use view
-    # min_distance, max_distance, min_width, max_width = view
-    # view_distance, view_width = view
-    
-    #**************************************************************************
-    
+    # define helper
     dimension = (width, height)
     center = ((pos_xy - origin_xy) / resolution).astype(int)
-    ang = yaw
 
     # create view_mask
     pts = trapezeMask(center, view)
-    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=ang).astype(int)))
+    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=yaw).astype(int)))
     im = Image.new('L', dimension, 0)
     ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)
     view_mask = ar(im)
@@ -82,7 +70,7 @@ def createPessimisticMask(map_msg, odom_msg, scan_msg, view):
     xs = ranges * cos(angles)
     ys = ranges * sin(angles)
     pts = (ar((xs, ys)).T / resolution + center).astype(int)
-    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=ang).astype(int)))
+    pts_rot = tuple(map(tuple, Rotate2D(pts,center,ang=yaw).astype(int)))
     im = Image.new('L', dimension, 0)
     ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)
     map_mask = ar(im)

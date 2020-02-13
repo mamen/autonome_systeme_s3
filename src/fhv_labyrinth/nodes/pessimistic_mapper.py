@@ -3,22 +3,19 @@ import rospy
 import tf
 import numpy as np
 
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid
 from map_msgs.msg import OccupancyGridUpdate
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import PoseStamped
 
 from pessimistic_mask import createPessimisticMask
 
-show_view = False
-
-
 class PessimisticMapper(object):
     def __init__(self, topics, frames, view):
-        _map, _odom, _scan, _full, _update = topics
+        _map, _scan, _full, _update = topics
         
         # frames
-        self.frame_map, self.frame_scan = frames
+        self.frame_map, self.frame_base_link = frames
 
         # message data incoming
         self.map_msg = None
@@ -30,15 +27,15 @@ class PessimisticMapper(object):
         self.pessimistic_map = None
         self.view = view
 
+        # frame transformer
+        self.tl = tf.TransformListener()
+
         # publishers
         self.pub_full = rospy.Publisher(_full, OccupancyGrid, queue_size=1, latch=True)
         self.pub_update = rospy.Publisher(_update, OccupancyGridUpdate, queue_size=1, latch=True)
-        if show_view:
-            self.pub_view = rospy.Publisher('current_view', OccupancyGrid, queue_size=1, latch=True)
 
         # subscribers
         self.sub_map = rospy.Subscriber(_map, OccupancyGrid, self.onMapMessage)
-        self.sub_odom = rospy.Subscriber(_odom, PoseStamped, self.onOdomMessage)
         self.sub_scan = rospy.Subscriber(_scan, LaserScan, self.onScanMessage)
 
     def onMapMessage(self, msg):
@@ -46,9 +43,6 @@ class PessimisticMapper(object):
             self.dimension = (msg.info.height, msg.info.width)
             self.pessimistic_map = np.ones(self.dimension).astype(bool)
         self.map_msg = msg
-
-    def onOdomMessage(self, msg):
-        self.odom_msg = msg
 
     def onScanMessage(self, msg):
         self.scan_msg = msg
@@ -63,81 +57,73 @@ class PessimisticMapper(object):
         r = rospy.Rate(rate_update)
 
         while not rospy.is_shutdown():
+            if self.map_msg and self.scan_msg:
+                try:
+                    point, quaternion = self.tl.loopkupTransform(self.frame_map, self.frame_base_link, rospy.Time())                
+                    pos_xy = ar(point[:2])
+                    yaw = tf.transformations.euler_from_quaternion(quaternion)[2]
 
-            if self.map_msg and self.odom_msg and self.scan_msg:
-                # create visible area mask
-                mask = createPessimisticMask(self.map_msg, self.odom_msg, self.scan_msg, self.view)
-                
-                if mask.any():
-                    # mark visible area at current pose as visited (can be shown in map now)
-                    self.pessimistic_map[mask == True] = False
+                    # create visible area mask
+                    mask = createPessimisticMask(self.map_msg, self.scan_msg, self.view, pos_xy, yaw)
+                    
+                    if mask.any():
+                        # mark visible area at current pose as visited (can be shown in map now)
+                        self.pessimistic_map[mask == True] = False
 
-                    # bring data in shape
-                    pessimistic = np.array(self.map_msg.data).reshape(self.dimension)
+                        # bring data in shape
+                        pessimistic = np.array(self.map_msg.data).reshape(self.dimension)
 
-                    # mark pessimistic fields as Unknown
-                    pessimistic[self.pessimistic_map == True] = -1
+                        # mark pessimistic fields as Unknown
+                        pessimistic[self.pessimistic_map == True] = -1
 
-                    # determine region of update
-                    xs, ys = np.where(mask)
+                        # determine region of update
+                        xs, ys = np.where(mask)
 
-                    x = np.min(xs)
-                    y = np.min(ys)
-                    height = np.max(xs) - x + 1
-                    width = np.max(ys) - y + 1
+                        x = np.min(xs)
+                        y = np.min(ys)
+                        height = np.max(xs) - x + 1
+                        width = np.max(ys) - y + 1
 
-                    # get current time
-                    now = rospy.Time.now()
+                        # get current time
+                        now = rospy.Time.now()
 
-                    # prepare update message
-                    update = OccupancyGridUpdate()
-                    update.header.frame_id = self.frame_map
-                    update.header.seq = seq_update
-                    update.header.stamp = now
-                    update.x = x
-                    update.y = y
-                    update.width = width
-                    update.height = height
-                    update.data = pessimistic[x:x + height, y:y + width].reshape(-1)
+                        # prepare update message
+                        update = OccupancyGridUpdate()
+                        update.header.frame_id = self.frame_map
+                        update.header.seq = seq_update
+                        update.header.stamp = now
+                        update.x = x
+                        update.y = y
+                        update.width = width
+                        update.height = height
+                        update.data = pessimistic[x:x + height, y:y + width].reshape(-1)
 
-                    # publish update
-                    self.pub_update.publish(update)
+                        # publish update
+                        self.pub_update.publish(update)
 
-                    if show_view:
-                        view_data = mask.astype(int)
-                        view_data[mask == False] = -1
-                        view_data[mask == True] = 0
-                        view = OccupancyGrid()
-                        view.header.frame_id = self.frame_map
-                        view.header.seq = seq_update
-                        view.header.stamp = now
-                        view.info = self.map_msg.info
-                        view.data = view_data.reshape(-1)
+                        # increment sequence counter
+                        seq_update += 1
 
-                        self.pub_view.publish(view)
+                        # it's time for a full update
+                        if counter == 0:
+                            # reset countdown
+                            counter = counter_limit
 
-                    # increment sequence counter
-                    seq_update += 1
+                            # perform full update
+                            full = OccupancyGrid()
+                            full.header.frame_id = self.frame_map
+                            full.header.seq = seq_full
+                            full.header.stamp = now
+                            full.info = self.map_msg.info
+                            full.data = pessimistic.reshape(-1)
 
-                    # it's time for a full update
-                    if counter == 0:
-                        # reset countdown
-                        counter = counter_limit
+                            self.pub_full.publish(full)
 
-                        # perform full update
-                        full = OccupancyGrid()
-                        full.header.frame_id = self.frame_map
-                        full.header.seq = seq_full
-                        full.header.stamp = now
-                        full.info = self.map_msg.info
-                        full.data = pessimistic.reshape(-1)
+                            seq_full += 1
 
-                        self.pub_full.publish(full)
-
-                        seq_full += 1
-
-                    counter -= 1
-
+                        counter -= 1
+                except (tf.Exception, tf.LookupException, tf.ConnectivityException):
+                    rospy.logerr("Transformation failed, sorry")
             r.sleep()
 
 
@@ -147,7 +133,6 @@ def main():
 
         topics = (
             rospy.get_param('~topic_map', default='map'),
-            rospy.get_param('~topic_odom', default='robot_pose'),
             rospy.get_param('~topic_scan', default='scan'),
             rospy.get_param('~topic_full', default='pessimistic'),
             rospy.get_param('~topic_update', default='pessimistic_updates')
@@ -155,7 +140,7 @@ def main():
 
         frames = (
             rospy.get_param('~frame_map', default='map'),
-            rospy.get_param('~frame_scan', default='scan')
+            rospy.get_param('~frame_base_link', default='base_link')
         )
 
         view = (

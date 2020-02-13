@@ -195,7 +195,7 @@ class TagDetector(object):
         except cvb.CvBridgeError as e:
             rospy.logerr("CvBridge Error: {0}".format(e))
         except (tf.Exception, tf.LookupException, tf.ConnectivityException):
-            rospy.logerr("Transformation failed Error")
+            rospy.logerr("Transformation failed, oopsie")
 
     def spin(self):
         rate = rospy.Rate(hz)

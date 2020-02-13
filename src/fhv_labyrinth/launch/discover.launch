@@ -68,7 +68,7 @@
             <param name="topic_update" value="$(arg topic_update)" />
 
             <param name="frame_map" value="$(arg frame_map)" />
-            <param name="frame_scan" value="$(arg frame_scan)" />
+            <param name="frame_base_link" value="$(arg frame_base_link)" />
 
             <param name="sight_distance_min" value="6" />
             <param name="sight_distance_max" value="20" />
