@@ -1,0 +1,28 @@
+<launch>
+    <arg name="turtlebot" default="true" />
+    <arg name="camera" default="true" />
+    <arg name="pose" default="false" />
+
+    <group>
+        <!-- Arguments -->
+        <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+        
+        <arg name="tf_prefix" default="$(env ROS_NAMESPACE)" />
+        <arg name="frame_prefix" default="$(arg tf_prefix)/" />
+
+        <arg name="frame_base_scan" default="$(arg frame_prefix)base_scan"/>
+        
+        <!-- Turtlebot3 -->
+        <include file="$(find turtlebot3_bringup)/launch/turtlebot3_robot.launch" output="screen" if="$(arg turtlebot)">
+            <arg name="multi_robot_name" value="$(arg tf_prefix)" />
+            <!-- TODO: check if this is needed -->
+            <arg name="set_lidar_frame_id" value="$(arg frame_base_scan)" />
+        </include>
+
+        <!-- RaspiCam -->
+        <include file="$(find raspicam_node)/launch/camerav2_1280x720.launch" output="screen" if="$(arg camera)" />
+
+        <!-- PosePublisher -->
+        <node pkg="robot_pose_publisher" type="robot_pose_publisher" name="robot_pose_publisher" respawn="true" output="screen" if="$(arg pose)" />
+    </group>
+</launch>
