@@ -15,7 +15,7 @@ coop_data_class = PointStamped
 
 class CoopTagFinder(object):
     def __init__(self, tag_positions, search_topic, found_topic, tolerance, frame_map):
-        self.search_list = [tag_positions]
+        self.search_list = tag_positions
         self.searching_list = []
         self.found_list = []
         self.tolerance = tolerance
@@ -29,7 +29,7 @@ class CoopTagFinder(object):
         self.sub_found = rospy.Subscriber(found_topic, coop_data_class, self.onFound)
 
         # Create an action client called "move_base" with action definition file "MoveBaseAction"
-        self.client = actionlib.SimpleActionClient('denmen/move_base', MoveBaseAction)
+        self.client = actionlib.SimpleActionClient('/denmen/move_base', MoveBaseAction)
 
         # Waits until the action server has started up and started listening for goals.
         self.client.wait_for_server()
@@ -78,23 +78,20 @@ class CoopTagFinder(object):
             pass
 
     def localize(self):
-        rospy.wait_for_service('/global_localization')
-        amcl_global_localization = rospy.ServiceProxy('/global_localization', Empty)
+        rospy.wait_for_service('/denmen/global_localization')
+        amcl_global_localization = rospy.ServiceProxy('/denmen/global_localization', Empty)
         amcl_global_localization(EmptyRequest())
 
     def findAll(self):
-
-        rospy.loginfo('fooo {}'.format(self.done()))
 
         if self.done():
             return
         # activate global localization (we can be anywhere)
         self.localize()
 
-        rospy.loginfo('baaar')
-
         while not rospy.is_shutdown() and not self.done():
             # get next goal in personal data format (x y map coordinates)
+            rospy.loginfo(self.next_target())
             (next_x, next_y) = self.next_target()
 
             target = PointStamped()
