@@ -3,7 +3,7 @@
     <arg name="mapserver" default="true" />
     <arg name="localization" default="true" />
     <arg name="move_base" default="true" />
-    <arg name="coop_tag_finder" default="false" />
+    <arg name="coop_tag_finder" default="true" />
     <arg name="mux" default="true" />
     <arg name="rviz" default="true" />
 
@@ -119,6 +119,9 @@
             <param name="topic_vel" value="$(arg topic_finder_vel)" />
 
             <param name="frame_map" value="$(arg frame_map)" />
+
+            <param name="sound" value="$(find fhv_labyrinth)/sounds/sound.mp3" />
+
         </node>
 
         <!-- Visualzation -->

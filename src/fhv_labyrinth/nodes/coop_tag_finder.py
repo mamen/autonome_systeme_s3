@@ -223,29 +223,30 @@ class CoopTagFinder(object):
             rospy.logerr("Transformation failed, oopsie")
 
     def driveOnTag(self):
+
         keypoints = self.getLatestKeypoints()
         while len(keypoints):
             twist = Twist()
-            
             kp = keypoints[0]
                 
             offset = kp.pt[0] - self.image_width / 2
                 
             if offset > 50:
-                twist.angular.z = -0.3
+                twist.angular.z = -0.15
             elif offset < -50:
-                twist.angular.z = 0.3
+                twist.angular.z = 0.15
             else:
                 twist.linear.x = 0.11
                 
             self.pub_vel.publish(twist)
             rospy.sleep(0.1)
             keypoints = self.getLatestKeypoints()
-        
+
+        twist = Twist()
         # forward 2 sec
         twist.linear.x = 0.22    
         self.pub_vel.publish(twist)
-        rospy.sleep(2)
+        rospy.sleep(1.75)
 
         # stop it
         twist = Twist()
