@@ -13,7 +13,7 @@ from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
 from geometry_msgs.msg import PointStamped, Twist
 from std_msgs.msg import Header, String
 from actionlib_msgs.msg import GoalStatus
-from sensor_msgs.msg import CompressedImage
+from sensor_msgs.msg import CompressedImage, LaserScan
 
 from topic_tools.srv import MuxSelect, MuxSelectRequest
 from std_srvs.srv import Empty, EmptyRequest
@@ -65,7 +65,7 @@ class CoopTagFinder(object):
         self.found_list = []
 
         # topics
-        topic_search, topic_found, topic_image, self.topic_vel = topics
+        topic_search, topic_found, topic_image, topic_scan, self.topic_vel = topics
 
         # frames
         self.frame_map, self.frame_base_link = frames
@@ -90,6 +90,7 @@ class CoopTagFinder(object):
         self.sub_search = rospy.Subscriber(topic_search, coop_data_class, self.onSearch)
         self.sub_found = rospy.Subscriber(topic_found, coop_data_class, self.onFound)
         self.sub_image = rospy.Subscriber(topic_image, CompressedImage, self.onImage)
+        self.sub_scan = rospy.Subscriber(topic_scan, LaserScan, self.onScan)
         self.sub_muxSelected = rospy.Subscriber('mux/selected', String, self.onMuxSelected)
 
         # publishers
@@ -151,13 +152,58 @@ class CoopTagFinder(object):
         self.image_msg = msg
         self.has_new_image = True
 
+    def onScan(self, msg):
+        self.scan_msg = msg
+
     def onMuxSelected(self, msg):
         self.mux_selected = msg.data
+
+    def driveRandomly(self, duration):
+        change_mux = self.mux_selected != self.topic_vel
+        if change_mux:
+            mux_select_req = MuxSelectRequest()
+            mux_select_req.topic = self.topic_vel
+            prev_topic = self.mux_select(mux_select_req).prev_topic
+            while self.mux_selected != self.topic_vel:
+                self.rate.sleep()
+
+        # drive randomly without touching things for 8 seconds
+        then = rospy.Time.now() + rospy.Duration(duration)
+        turn = True
+        
+        while rospy.Time.now() < then:
+            twist = Twist()
+            distances = self.scan_msg.ranges
+        
+            if max(distances[90], distances[270]) > max(distances[0], distances[180]) or turn:
+                # turn
+                twist.angular.z = 1
+            else:
+                # go straight
+                if distances[0] > distances[180]:
+                    # forward
+                    twist.linear.x = 0.22
+                else:
+                    twist.linear.x = -0.22
+            
+            turn = not turn
+            
+            self.pub_vel.publish(twist)
+            self.rate.sleep()
+
+        if change_mux:
+            mux_select_req = MuxSelectRequest()
+            mux_select_req.topic = prev_topic
+            self.mux_select(mux_select_req)
+            while self.mux_selected != prev_topic:
+                self.rate.sleep()
 
     def localize(self):
         rospy.wait_for_service('/denmen/global_localization')
         amcl_global_localization = rospy.ServiceProxy('/denmen/global_localization', Empty)
         amcl_global_localization(EmptyRequest())
+
+        self.driveRandomly(20)
 
     def getLatestKeypoints(self):
         try:
@@ -257,10 +303,11 @@ class CoopTagFinder(object):
     def findAll(self):
         if self.done():
             return
+        
+        self.rate = rospy.Rate(hz)
+        
         # activate global localization (we can be anywhere)
         self.localize()
-
-        rate = rospy.Rate(hz)
 
         while not rospy.is_shutdown() and not self.done():
             # get next goal in personal data format (x y map coordinates)
@@ -292,7 +339,7 @@ class CoopTagFinder(object):
             self.client.send_goal(goal)
 
             while True:
-                rate.sleep()
+                self.rate.sleep()
 
                 state = self.client.get_state()
                 spotted = self.spotTarget((next_x, next_y))
@@ -317,9 +364,29 @@ class CoopTagFinder(object):
                 # houston, we have a problem!
                 continue
 
+            # spotted = False
+            # while not spotted:
+            #     self.rate.sleep()
+            #     spotted = self.spotTarget((next_x, next_y))
+
+            #     if self.client.get_state() != GoalStatus.ACTIVE:
+            #         # planner failed.. maybe stuck?
+            #         self.client.cancel_goal()
+            #         self.driveRandomly(5)
+            #         self.client.send_goal(goal)
+
+            # if self.client.get_state() == GoalStatus.ACTIVE:
+            #     # i want to drive now!
+            #     self.client.cancel_goal()
+            
+            # # target spotted
+            # mux_select_req = MuxSelectRequest()
+            # mux_select_req.topic = self.topic_vel
+            # prev_topic = self.mux_select(mux_select_req).prev_topic
+            
             # wait for changes to apply
             while self.mux_selected != self.topic_vel:
-                rate.sleep()
+                self.rate.sleep()
             
             # drive
             self.driveOnTag()
@@ -330,6 +397,9 @@ class CoopTagFinder(object):
             # target reached
             self.pub_found.publish(target)
 
+            # unwedge if somewhere close to wall
+            self.driveRandomly(7)
+
             # revert mux
             mux_select_req = MuxSelectRequest()
             mux_select_req.topic = prev_topic
@@ -337,7 +407,7 @@ class CoopTagFinder(object):
             self.mux_select(mux_select_req)
 
             while self.mux_selected != prev_topic:
-                rate.sleep()
+                self.rate.sleep()
 
             # done, ready for next target    
 
@@ -349,6 +419,7 @@ def main():
             rospy.get_param('~topic_search', default='/coop_tag/searching'),
             rospy.get_param('~topic_found', default='/coop_tag/reached'),
             rospy.get_param('~topic_image', default='raspicam_node/image/compressed'),
+            rospy.get_param('~topic_scan', default='scan'),
             rospy.get_param('~topic_vel', default='finder_vel')
         )
 
@@ -360,7 +431,7 @@ def main():
         tolerance = rospy.get_param('~tolerance', default=0.4)
 
         filename = rospy.get_param('~filename', default='/home/ros/catkin_ws/src/fhv_labyrinth/tags/tags.csv')
-        sound = rospy.get_param('~sound', default='../sounds/sound.mp3')
+        sound = rospy.get_param('~sound', default='/home/ros/catkin_ws/src/fhv_labyrinth/sounds/sound.mp3')
 
         with open(filename) as f:
             r = csv.reader(f, delimiter=';')
