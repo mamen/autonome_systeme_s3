@@ -94,9 +94,9 @@ class CoopTagFinder(object):
         self.sub_muxSelected = rospy.Subscriber('mux/selected', String, self.onMuxSelected)
 
         # publishers
-        self.pub_search = rospy.Publisher(topic_search, coop_data_class, queue_size=2)
-        self.pub_found = rospy.Publisher(topic_found, coop_data_class, queue_size=2)
-        self.pub_vel = rospy.Publisher(self.topic_vel, Twist, queue_size=1)
+        self.pub_search = rospy.Publisher(topic_search, coop_data_class, queue_size=1, latch=True)
+        self.pub_found = rospy.Publisher(topic_found, coop_data_class, queue_size=1, latch=True)
+        self.pub_vel = rospy.Publisher(self.topic_vel, Twist, queue_size=1, latch=True)
 
         # service clients
         # mux
@@ -115,6 +115,7 @@ class CoopTagFinder(object):
         return next(iter(next_search_list))
 
     def onSearch(self, msg):
+        rospy.loginfo('search message with x: {} and y: {}'.format(msg.point.x, msg.point.y))
         # convert coop message into private format
         t_xy = msg.point.x, msg.point.y
 
@@ -130,8 +131,10 @@ class CoopTagFinder(object):
         
         # other robot found a tag we didn't find... who cares?
         # TODO add cancel behavior
+        rospy.loginfo('current state: search: {}, searching: {}, found: {}'.format(self.search_list, self.searching_list, self.found_list))
 
     def onFound(self, msg):
+        rospy.loginfo('found message with x: {} and y: {}'.format(msg.point.x, msg.point.y))
         # convert coop message into private format
         t_xy = msg.point.x, msg.point.y
 
@@ -147,6 +150,7 @@ class CoopTagFinder(object):
         
         # other robot found a tag we didn't find... who cares?
         # TODO add cancel behavior
+        rospy.loginfo('current state: search: {}, searching: {}, found: {}'.format(self.search_list, self.searching_list, self.found_list))
 
     def onImage(self, msg):
         self.image_msg = msg
@@ -159,28 +163,38 @@ class CoopTagFinder(object):
         self.mux_selected = msg.data
 
     def driveRandomly(self, duration):
+
+        rate = rospy.Rate(5)
+
         change_mux = self.mux_selected != self.topic_vel
         if change_mux:
             mux_select_req = MuxSelectRequest()
             mux_select_req.topic = self.topic_vel
             prev_topic = self.mux_select(mux_select_req).prev_topic
             while self.mux_selected != self.topic_vel:
-                self.rate.sleep()
+                rate.sleep()
 
-        # drive randomly without touching things for 8 seconds
+        # drive randomly without touching things for x seconds
         then = rospy.Time.now() + rospy.Duration(duration)
         turn = True
         
         while rospy.Time.now() < then:
             twist = Twist()
-            distances = self.scan_msg.ranges
-        
-            if max(distances[90], distances[270]) > max(distances[0], distances[180]) or turn:
+            distances = np.array(self.scan_msg.ranges)
+
+            distances[distances > 8.0] = 8.0
+
+            front = np.concatenate((distances[:45], distances[315:]), axis=None)
+            right = distances[45:135]
+            down = distances[135:225]
+            left = distances[225:315]
+
+            if min(front.mean(), down.mean()) < min(left.mean(), right.mean()) or turn:
                 # turn
-                twist.angular.z = 1
+                twist.angular.z = 0.5
             else:
                 # go straight
-                if distances[0] > distances[180]:
+                if front.mean() > down.mean():
                     # forward
                     twist.linear.x = 0.22
                 else:
@@ -189,14 +203,14 @@ class CoopTagFinder(object):
             turn = not turn
             
             self.pub_vel.publish(twist)
-            self.rate.sleep()
+            rate.sleep()
 
         if change_mux:
             mux_select_req = MuxSelectRequest()
             mux_select_req.topic = prev_topic
             self.mux_select(mux_select_req)
             while self.mux_selected != prev_topic:
-                self.rate.sleep()
+                rate.sleep()
 
     def localize(self):
         rospy.wait_for_service('/denmen/global_localization')
