@@ -10,7 +10,6 @@
     <group>
         <!-- Arguments -->
         <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
-        <arg name="phase" default="visitor" doc="phase [discover, visitor]"/>
 
         <arg name="map_file" default="$(find fhv_labyrinth)/maps/labyrinth.yaml"/>
         <arg name="tag_file" default="$(find fhv_labyrinth)/tags/tags.csv"/>
@@ -24,11 +23,11 @@
         <arg name="frame_base_link" default="$(arg frame_prefix)base_link"/>
         <arg name="frame_base_footprint" default="$(arg frame_prefix)base_footprint"/>
         
-        <arg name="topic_search" default="$(env COOP_SEARCHING_TOPIC)" />
-        <arg name="topic_found" default="$(env COOP_REACHED_TOPIC)" />
         <arg name="topic_cmd_vel" default="cmd_vel" />
         <arg name="topic_move_base_vel" default="move_base_vel" />
         <arg name="topic_finder_vel" default="finder_vel" />
+        <arg name="topic_search" default="$(env COOP_SEARCHING_TOPIC)" />
+        <arg name="topic_found" default="$(env COOP_REACHED_TOPIC)" />
 
         <!-- Turtlebot3 -->
         <include file="$(find turtlebot3_bringup)/launch/turtlebot3_remote.launch" if="$(arg turtlebot)">
@@ -43,39 +42,7 @@
 
         <!-- Localization -->
         <node pkg="amcl" type="amcl" name="amcl" output="screen" if="$(arg localization)">
-            <!-- <param name="min_particles"             value="500"/> -->
-            <param name="min_particles"             value="30"/>
-            <param name="max_particles"             value="3000"/>
-            <!-- <param name="kld_err"                   value="0.02"/> -->
-            <param name="kld_err"                   value="0.005"/>
-            <param name="update_min_d"              value="0.20"/>
-            <param name="update_min_a"              value="0.20"/>
-            <param name="resample_interval"         value="1"/>
-            <param name="transform_tolerance"       value="0.5"/>
-            <!-- <param name="recovery_alpha_slow"       value="0.1"/> -->
-            <param name="recovery_alpha_slow"       value="0.001"/>
-            <param name="recovery_alpha_fast"       value="0.1"/>
-            <param name="initial_pose_x"            value="0.0"/>
-            <param name="initial_pose_y"            value="0.0"/>
-            <param name="initial_pose_a"            value="0.0"/>
-            <!-- <param name="gui_publish_rate"          value="50.0"/> -->
-            <param name="gui_publish_rate"          value="5.0"/>
-            <!-- <param name="laser_max_range"           value="3.5"/> -->
-            <param name="laser_max_range"           value="-1.0"/>
-            <param name="laser_max_beams"           value="360"/>
-            <param name="laser_z_hit"               value="0.5"/>
-            <param name="laser_z_short"             value="0.05"/>
-            <param name="laser_z_max"               value="0.05"/>
-            <param name="laser_z_rand"              value="0.5"/>
-            <param name="laser_sigma_hit"           value="0.2"/>
-            <param name="laser_lambda_short"        value="0.1"/>
-            <param name="laser_likelihood_max_dist" value="2.0"/>
-            <param name="laser_model_type"          value="likelihood_field"/>
-            <param name="odom_model_type"           value="diff"/>
-            <param name="odom_alpha1"               value="0.1"/>
-            <param name="odom_alpha2"               value="0.1"/>
-            <param name="odom_alpha3"               value="0.1"/>
-            <param name="odom_alpha4"               value="0.1"/>
+            <rosparam file="$(find fhv_labyrinth)/param/amcl_params.yaml" command="load" />
             <param name="odom_frame_id"             value="$(arg frame_odom)"/>
             <param name="base_frame_id"             value="$(arg frame_base_footprint)"/>
             <param name="global_frame_id"           value="$(arg frame_map)"/>
@@ -86,25 +53,16 @@
 
         <!-- Movement -->
         <node pkg="move_base" type="move_base" respawn="true" name="move_base" output="screen" if="$(arg move_base)">
-            <!-- Global Planner -->
-            <param name="base_global_planner" value="global_planner/GlobalPlanner" />
-            <rosparam file="$(find fhv_labyrinth)/param/global_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
-            
-            <!-- Local Planner -->
-            <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" />
-            <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
-
-            <!-- Global Costmap -->
-            <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="global_costmap" />
-            <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
-
-            <!-- Local Costmap -->
-            <rosparam file="$(find fhv_labyrinth)/param/costmap_common_params_$(arg model).yaml" command="load" ns="local_costmap" />
-            <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
-
             <!-- Move Base -->
             <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-            
+            <!-- Global Planner -->
+            <rosparam file="$(find fhv_labyrinth)/param/global_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
+            <!-- Local Planner -->
+            <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params_$(arg model)_$(arg phase).yaml" command="load" />
+            <!-- Global Costmap -->
+            <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+            <!-- Local Costmap -->
+            <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />            
             <!-- Renamings -->
             <remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>
         </node>

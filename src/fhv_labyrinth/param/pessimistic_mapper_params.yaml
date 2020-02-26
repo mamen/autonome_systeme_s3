@@ -1,0 +1,62 @@
+#### Topic Parameters ####
+
+# ~topic_map (string, default: 'map')
+# name of topic publishing map data
+# --> set in launch file
+
+# ~topic_odom (string, default: 'odom')
+# name of topic publishing current pose data
+# --> set in launch file
+
+# ~topic_scan (string, default: 'scan')
+# name of topic publishing current scan data
+# --> set in launch file
+
+# ~topic_full (string, default: 'pessimistic')
+# name of topic used to publish full pessimistic map data
+# --> set in launch file
+
+# ~topic_update (string, default: 'pessimistic_update')
+# name of topic used to publish pessimistic map data updates
+# --> set in launch file
+
+
+#### Frame Parameters ####
+
+# ~frame_map (string, default: 'map')
+# name of frame used when publishing pessimistic map data (updates)
+# --> set in launch file
+
+# ~frame_base_link (string, default: 'base_link')
+# name of frame used to calculate position
+# --> set in launch file
+
+
+#### Camera Sight Parameters ####
+
+# ~sight_distance_min (int, default: 6)
+# minimum horizontal distance [grid fields] at which an object is recognizable
+sight_distance_min: 6
+
+# ~sight_distance_max (int, default: 6)
+# maximum horizontal distance [grid fields] at which an object is recognizable
+sight_distance_max: 20
+
+# ~sight_width_min (int, default: 2)
+# absolute offset [grid fields] at which an object at min distance is recognizable
+sight_width_min: 2
+
+# ~sight_width_max (int, default: 15)
+# absolute offset [grid fields] at which an object at max distance is recognizable
+sight_width_min: 15
+
+
+#### Rate Parameters ####
+
+# ~rate_full (double, default: 1)
+# rate [Hz] at which the full map should be published
+rate_full: 1
+
+# ~rate_update (double, default: 10)
+# rate [Hz] at which only the updated parts should be published
+rate_update: 10

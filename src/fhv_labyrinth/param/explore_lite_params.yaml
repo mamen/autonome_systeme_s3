@@ -1,0 +1,44 @@
+# http://wiki.ros.org/explore_lite?distro=kinetic#Parameters
+
+# ~robot_base_frame (string, default: base_link)
+# The name of the base frame of the robot. This is used for determining robot position on map. Mandatory.
+# --> set in launch file
+
+# ~costmap_topic (string, default: costmap)
+# Specifies topic of source nav_msgs/OccupancyGrid. Mandatory.
+# --> set in launch file
+
+# ~costmap_updates_topic (string, default: costmap_updates)
+# Specifies topic of source map_msgs/OccupancyGridUpdate. Not necessary if source of map is always publishing full updates, i.e. does not provide this topic.
+# --> set in launch file
+
+# ~visualize (bool, default: false)
+# Specifies whether or not publish visualized frontiers.
+visualize: true
+
+# ~planner_frequency (double, default: 1.0)
+# Rate in Hz at which new frontiers will computed and goal reconsidered.
+planner_frequency: 0.1
+
+# ~progress_timeout (double, default: 30.0)
+# Time in seconds. When robot do not make any progress for progress_timeout, current goal will be abandoned.
+progress_timeout: 5.0
+
+# ~potential_scale (double, default: 1e-3)
+# Used for weighting frontiers. This multiplicative parameter affects frontier potential component of the frontier weight (distance to frontier).
+potential_scale: 2.0
+
+# ~orientation_scale (double, default: 0)
+# Used for weighting frontiers. This multiplicative parameter affects frontier orientation component of the frontier weight. This parameter does currently nothing and is provided solely for forward compatibility.
+
+# ~gain_scale (double, default: 1.0)
+# Used for weighting frontiers. This multiplicative parameter affects frontier gain component of the frontier weight (frontier size).
+gain_scale: 0.1
+
+# ~transform_tolerance (double, default: 0.3)
+# Transform tolerance to use when transforming robot pose.
+transform_tolerance: 0.5
+
+# ~min_frontier_size (double, default: 0.5)
+# Minimum size of the frontier to consider the frontier as the exploration goal. In meters.
+min_frontier_size: 0.1
