@@ -1,55 +1,55 @@
-# http://wiki.ros.org/global_planner?distro=kinetic#Parameters
+# # http://wiki.ros.org/global_planner?distro=kinetic#Parameters
 
-GlobalPlanner:
+# GlobalPlanner:
 
-    # ~<name>/allow_unknown (bool, default: true)
-    # Specifies whether or not to allow the planner to create plans that traverse unknown space. NOTE: if you are using a layered costmap_2d costmap with a voxel or obstacle layer, you must also set the track_unknown_space param for that layer to be true, or it will convert all your unknown space to free space (which planner will then happily go right through).
-    allow_unknown: true
+#     # ~<name>/allow_unknown (bool, default: true)
+#     # Specifies whether or not to allow the planner to create plans that traverse unknown space. NOTE: if you are using a layered costmap_2d costmap with a voxel or obstacle layer, you must also set the track_unknown_space param for that layer to be true, or it will convert all your unknown space to free space (which planner will then happily go right through).
+#     allow_unknown: true
 
-    # ~<name>/default_tolerance (double, default: 0.0)
-    # A tolerance on the goal point for the planner. The planner will attempt to create a plan that is as close to the specified goal as possible but no further than default_tolerance away.
-    default_tolerance: 0.0
+#     # ~<name>/default_tolerance (double, default: 0.0)
+#     # A tolerance on the goal point for the planner. The planner will attempt to create a plan that is as close to the specified goal as possible but no further than default_tolerance away.
+#     default_tolerance: 0.0
 
-    # ~<name>/visualize_potential (bool, default: false)
-    # Specifies whether or not to visualize the potential area computed via a PointCloud2.
-    visualize_potential: false
+#     # ~<name>/visualize_potential (bool, default: false)
+#     # Specifies whether or not to visualize the potential area computed via a PointCloud2.
+#     visualize_potential: false
 
-    # ~<name>/use_dijkstra (bool, default: true)
-    # If true, use dijkstra's algorithm. Otherwise, A*.
-    use_dijkstra: false
+#     # ~<name>/use_dijkstra (bool, default: true)
+#     # If true, use dijkstra's algorithm. Otherwise, A*.
+#     # use_dijkstra: false
 
-    # ~<name>/use_quadratic (bool, default: true)
-    # If true, use the quadratic approximation of the potential. Otherwise, use a simpler calculation.
-    use_quadratic: true
+#     # ~<name>/use_quadratic (bool, default: true)
+#     # If true, use the quadratic approximation of the potential. Otherwise, use a simpler calculation.
+#     use_quadratic: false
 
-    # ~<name>/use_grid_path (bool, default: false)
-    # If true, create a path that follows the grid boundaries. Otherwise, use a gradient descent method.
-    use_grid_path: false
+#     # ~<name>/use_grid_path (bool, default: false)
+#     # If true, create a path that follows the grid boundaries. Otherwise, use a gradient descent method.
+#     use_grid_path: true
 
-    # ~<name>/old_navfn_behavior (bool, default: false)
-    # If for some reason, you want global_planner to exactly mirror the behavior of navfn, set this to true (and use the defaults for the other boolean parameters)
-    old_navfn_behavior: false
+#     # ~<name>/old_navfn_behavior (bool, default: false)
+#     # If for some reason, you want global_planner to exactly mirror the behavior of navfn, set this to true (and use the defaults for the other boolean parameters)
+#     old_navfn_behavior: false
 
-    # ~<name>/lethal_cost (int, default: 253)
-    # Lethal Cost (dynamic reconfigure)
-    lethal_cost: 253
+#     # ~<name>/lethal_cost (int, default: 253)
+#     # Lethal Cost (dynamic reconfigure)
+#     lethal_cost: 253
 
-    # ~<name>/neutral_cost (int, default: 50)
-    # Neutral Cost (dynamic reconfigure)
-    neutral_cost: 50
+#     # ~<name>/neutral_cost (int, default: 50)
+#     # Neutral Cost (dynamic reconfigure)
+#     neutral_cost: 50
 
-    # ~<name>/cost_factor (double, default: 3.)
-    # Factor to multiply each cost from costmap by (dynamic reconfigure)
-    cost_factor: 3.0
+#     ~<name>/cost_factor (double, default: 3.)
+#     Factor to multiply each cost from costmap by (dynamic reconfigure)
+#     cost_factor: 3.0
 
-    # ~<name>/publish_potential (bool, default: True)
-    # Publish Potential Costmap (dynamic reconfigure)
-    publish_potential: true
+#     # ~<name>/publish_potential (bool, default: True)
+#     # Publish Potential Costmap (dynamic reconfigure)
+#     publish_potential: true
 
-    # ~<name>/orientation_mode (int, default: 0)
-    # How to set the orientation of each point (None=0, Forward=1, Interpolate=2, ForwardThenInterpolate=3, Backward=4, Leftward=5, Rightward=6) (dynamic reconfigure)
-    orientation_mode: 0
+#     # ~<name>/orientation_mode (int, default: 0)
+#     # How to set the orientation of each point (None=0, Forward=1, Interpolate=2, ForwardThenInterpolate=3, Backward=4, Leftward=5, Rightward=6) (dynamic reconfigure)
+#     orientation_mode: 0
 
-    # ~<name>/orientation_window_size (int, default: 1)
-    # What window to use to determine the orientation based on the position derivative specified by the orientation mode (dynamic reconfigure)
-    orientation_window_size: 1
+#     # ~<name>/orientation_window_size (int, default: 1)
+#     # What window to use to determine the orientation based on the position derivative specified by the orientation mode (dynamic reconfigure)
+#     orientation_window_size: 1
