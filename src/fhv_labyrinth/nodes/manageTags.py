@@ -10,18 +10,23 @@ import numpy as np
 from enum import Enum
 
 
-class Color(Enum):
-    RED = 1,
-    BLUE = 2
-
-
-class Manage():
+class Manage:
+    """
+    This Node manages all found Tags.
+    It keeps a list of tags and adds only found tags, that are not yet in that list.
+    """
 
     TAGS = []
 
+    """
+    Initialize the node
+    """
     def __init__(self):
         self.listenForTags()
 
+    """
+    Checks, if the tag is already in the list by comparing the locations of each tag.
+    """
     def isNewTag(self, newTag):
 
         if len(self.TAGS) == 0:
@@ -33,6 +38,9 @@ class Manage():
 
         return True
 
+    """
+    Returns the euclidean distance between two tags
+    """
     def calcDistance(self, t1, t2):
         return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
 
@@ -44,6 +52,9 @@ class Manage():
         else:
             rospy.loginfo("TAG ALREADY FOUND")
 
+    """
+    Initializes the subscriber for found tags
+    """
     def listenForTags(self):
 
         try:

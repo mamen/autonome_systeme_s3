@@ -6,12 +6,20 @@ import numpy as np
 import time
 from os.path import expanduser
 
-
+"""
+This Node filters out holes in the LIDAR-scan, caused by small spaces between the walls of the labyrinth 
+"""
 class Scan:
 
+    """
+    Node initialization
+    """
     def __init__(self):
         self.listenForNewScan()
 
+    """
+    Subscribes the node to the LIDAR-scan topic
+    """
     def listenForNewScan(self):
 
         try:
@@ -23,24 +31,14 @@ class Scan:
         finally:
             rospy.loginfo('Shutting down node...')
 
+    """
+    Filters the LIDAR-data and removes holes, that are bigger than min_num_zero_to_keep
+    A hole is represented as a 0 in the LIDAR-data
+    """
     def filter(self, data, min_num_zero_to_keep):
         i = 0
 
         data = list(data)
-
-        # cur_time = int(time.time())
-        #
-        # # Filename to write
-        # filename = "{}/lidar/{}.csv".format(expanduser("~"), cur_time)
-        #
-        # # Open the file with writing permission
-        # myfile = open(filename, 'w')
-        #
-        # # Write a line to the file
-        # myfile.write(data.__str__().replace("(","").replace(")",""))
-        #
-        # # Close the file
-        # myfile.close()
 
         while i < len(data):
 
@@ -67,20 +65,11 @@ class Scan:
 
             i += 1
 
-        # # Filename to write
-        # filename = "{}/lidar/{}_fixed.csv".format(expanduser("~"), cur_time)
-        #
-        # # Open the file with writing permission
-        # myfile = open(filename, 'w')
-        #
-        # # Write a line to the file
-        # myfile.write(tuple(data).__str__().replace("(","").replace(")",""))
-        #
-        # # Close the file
-        # myfile.close()
-
         return tuple(data)
 
+    """
+    Publish the fixed scan-data
+    """
     def processScan(self, data):
 
         data.ranges = self.filter(data.ranges, 12)

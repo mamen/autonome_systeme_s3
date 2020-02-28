@@ -22,8 +22,14 @@ def getTwist(linear_vel, angular_vel):
 
     return twist
 
+"""
+This Node will only be run once at the very beginning. It turns the robot about 180 degrees.
+"""
 class Spinner(object):
 
+    """
+    Initialisation
+    """
     def __init__(self, topic, duration):
         self.topic = topic
         self.rate = rospy.Rate(1)
@@ -39,7 +45,9 @@ class Spinner(object):
 
         self.prev = self.mux_select(mux_select_req).prev_topic
 
-
+    """
+    Spins the robot
+    """
     def onSelect(self, msg):
         print(msg.data, self.topic)
         if msg.data == self.topic:

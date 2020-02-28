@@ -36,23 +36,6 @@ params.filterByConvexity = False
 params.filterByInertia = False
 detector = cv.SimpleBlobDetector_create(params)
 
-# H matrix
-# H = np.array(
-#     [
-#         [-0.09288180869054626, 0.0054416583613956645, 55.428253772214454],
-#         [0.0025116067633560767, 0.0029759558170538375, -97.45956201150065],
-#         [0.00010195975796577268, -0.006257619108708003, 1.0]
-#     ]
-# )
-
-# H = np.array(
-#     [
-#         [-0.0798932872571099, 0.0067893048637875765, 46.19885049780504],
-#         [0.0032200929732064906, -0.026047246045125275, -78.77793179594805],
-#         [2.83100363868755e-05, -0.005435342278868193, 1.0]
-#     ]
-# )
-
 img_pts = np.array((
     (566.16085207, 633.06493435),
     (574.13351993, 530.97218097),
@@ -72,7 +55,13 @@ H = cv.findHomography(img_pts, real_pts)[0]
 # tag config
 MIN_DISTANCE_BETWEEN_TAGS = 0.6
 
+"""
+This Node detects Tags in the camera-image and calculates their position.
+"""
 class TagDetector(object):
+    """
+    Initialization
+    """
     def __init__(self, topic_image, filename, frames):
         self.frame_map, self.frame_base_link = frames
 
@@ -93,23 +82,38 @@ class TagDetector(object):
             self.tag_markers = MarkerArray()
             self.pub_tags = rospy.Publisher('discovered_tags', MarkerArray, queue_size=1)
 
+    """
+    Writes the header-line for the resulting CSV-file
+    """
     def writeHeader(self):
         with open(self.filename, 'w+') as f:
             f.write("id;x;y;z\n")
-
+    """
+    Appends a line to the CSV-file containing coordinates of a found tag
+    """
     def writeTag(self, tag):
         with open(self.filename, 'a+') as f:
             f.write("{};{};{};{}\n".format(self.id, tag.x, tag.y, tag.z))
 
+    """
+    This gets triggered when a new image is received.
+    """
     def onImage(self, msg):
         self.image_msg = msg
         self.has_new_image = True
 
+    """
+    Checks, if the found tag has a big enough distance to all other already found tags.
+    This should prevent tags from being detected twice.
+    """
     def distanceBigEnoughGenerator(self, tag):
         for t in self.tags:
             d = ((t.x - tag.x) ** 2 + (t.y - tag.y) ** 2) ** 0.5
             yield d >= MIN_DISTANCE_BETWEEN_TAGS
 
+    """
+    The received image is masked and if a tag is found in that image, its position is being calculated
+    """
     def performCalculation(self):
         try:
             self.has_new_image = False
@@ -206,7 +210,10 @@ class TagDetector(object):
                 self.performCalculation()
             rate.sleep()
 
-
+"""
+In case the node crashes, the wheels should stop spinning.
+This does not yet work reliably.
+"""
 def stopWheels():
     twist = Twist()
 

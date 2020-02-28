@@ -26,6 +26,9 @@ rotation_xyzw = (
     1.0
 )
 
+"""
+This node transforms the camera_link frame to the base_link frame
+"""
 def main():
     try:
         rospy.init_node('tf_cam', anonymous=True)

@@ -50,7 +50,13 @@ H = cv.findHomography(img_pts, real_pts)[0]
 # tag config
 MIN_DISTANCE_BETWEEN_TAGS = 0.6
 
+"""
+This Node detects Tags and positions the roboter in top of them.
+"""
 class TagVisitor(object):
+    """
+    Initialization
+    """
     def __init__(self, topic_image, filename, frames):
         self.frame_map, self.frame_base_link = frames
         self.image_msg = None
@@ -58,15 +64,25 @@ class TagVisitor(object):
         self.tl = tf.TransformListener()
         self.sub_image = rospy.Subscriber(topic_image, CompressedImage, self.onImage)
 
+    """
+    This gets triggered when a new image is received.
+    """
     def onImage(self, msg):
         self.image_msg = msg
         self.has_new_image = True
 
+    """
+    Checks, if the found tag has a big enough distance to all other already found tags.
+    This should prevent tags from being detected twice.
+    """
     def distanceBigEnoughGenerator(self, tag):
         for t in self.tags:
             d = ((t.x - tag.x) ** 2 + (t.y - tag.y) ** 2) ** 0.5
             yield d >= MIN_DISTANCE_BETWEEN_TAGS
 
+    """
+    The received image is masked and if a tag is found in that image, its position is being calculated
+    """
     def performCalculation(self):
         try:
             self.has_new_image = False
@@ -163,7 +179,10 @@ class TagVisitor(object):
                 self.performCalculation()
             rate.sleep()
 
-
+"""
+In case the node crashes, the wheels should stop spinning.
+This does not yet work reliably.
+"""
 def stopWheels():
     twist = Twist()
 
