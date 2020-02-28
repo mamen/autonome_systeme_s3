@@ -11,7 +11,13 @@ from geometry_msgs.msg import PoseStamped
 from pessimistic_mask import createPessimisticMask
 
 class PessimisticMapper(object):
+    """
+    Creates a Map from an actual map but only with things which have been really "seen" by camera
+    """
     def __init__(self, topics, frames, view):
+        """
+        creates a new instance
+        """
         _map, _scan, _full, _update = topics
         
         # frames
@@ -39,15 +45,24 @@ class PessimisticMapper(object):
         self.sub_scan = rospy.Subscriber(_scan, LaserScan, self.onScanMessage)
 
     def onMapMessage(self, msg):
+        """
+        Callback upon receiving map message from slam
+        """
         if self.pessimistic_map is None:
             self.dimension = (msg.info.height, msg.info.width)
             self.pessimistic_map = np.ones(self.dimension).astype(bool)
         self.map_msg = msg
 
     def onScanMessage(self, msg):
+        """
+        Callback upon receiving a new LIDAR scan message
+        """
         self.scan_msg = msg
 
     def runMapping(self, rate_full, rate_update):
+        """
+        periodically performs the uncovering of the original map based on current sight
+        """
         counter_limit = rate_update / rate_full
         counter = 0
 
@@ -57,13 +72,15 @@ class PessimisticMapper(object):
         r = rospy.Rate(rate_update)
 
         while not rospy.is_shutdown():
+            # not much we can do if we get no map or scan
             if self.map_msg and self.scan_msg:
                 try:
+                    # get current position in map frame
                     point, quaternion = self.tl.lookupTransform(self.frame_map, self.frame_base_link, rospy.Time())
                     pos_xy = np.array(point[:2])
                     yaw = tf.transformations.euler_from_quaternion(quaternion)[2]
 
-                    # create visible area mask
+                    # create visible area mask based on emulated sight and actualy possible sight
                     mask = createPessimisticMask(self.map_msg, self.scan_msg, self.view, pos_xy, yaw)
                     
                     if mask.any():

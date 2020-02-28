@@ -26,10 +26,11 @@ rotation_xyzw = (
     1.0
 )
 
-"""
-This node transforms the camera_link frame to the base_link frame
-"""
 def main():
+    """
+    This node transforms the camera_link frame to the base_link frame.
+    not really in use anymore since that homography matrix provides a position only shifted in z axis (which does not affect the position in horizontal plane)
+    """
     try:
         rospy.init_node('tf_cam', anonymous=True)
         tb = tf.TransformBroadcaster(queue_size=100)

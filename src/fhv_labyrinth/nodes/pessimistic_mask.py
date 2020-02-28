@@ -10,12 +10,18 @@ ar = np.array
 arange = np.arange
 
 def Rotate2D(pts,cnt,ang=pi/4):
+    """
+    rotate many 2D points around a centered point by angle
+    """
     return dot(pts-cnt,ar([[cos(ang),sin(ang)],[-sin(ang),cos(ang)]]))+cnt
 
 def trapezeMask(center, view):
+    """
+    creates an emulated perspective of the camera's sight field in form of a trapeze
+    """
     (d_min, d_max), (w_min, w_max) = view
 
-    # isosceles triangle facing up
+    # isosceles trapeze facing up
     cx, cy = center
 
     # top left
@@ -31,6 +37,10 @@ def trapezeMask(center, view):
     return pts
 
 def triangleMask(center, view):
+    """
+    creates an emulated perspective of the camera's sight field in form of an isosceles triangle
+    this was replaced by the trapeze due to unreal behavior.
+    """
     view_distance, view_width = view
 
     # isosceles triangle facing up
@@ -75,5 +85,6 @@ def createPessimisticMask(map_msg, scan_msg, view, pos_xy, yaw):
     ImageDraw.Draw(im).polygon(pts_rot, fill=1, outline=1)
     map_mask = ar(im)
 
+    # prevent that the emulated view mask sees through walls
     mask = view_mask * map_mask
     return mask == 1

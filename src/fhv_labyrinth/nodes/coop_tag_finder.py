@@ -18,6 +18,7 @@ from sensor_msgs.msg import CompressedImage, LaserScan
 from topic_tools.srv import MuxSelect, MuxSelectRequest
 from std_srvs.srv import Empty, EmptyRequest
 
+# this is the message type we all agreed on
 coop_data_class = PointStamped
 
 # framerate (hz)
@@ -57,15 +58,15 @@ real_pts = np.array((
 
 H = cv.findHomography(img_pts, real_pts)[0]
 
-"""
-This node manages the cooperation between two or more robots.
-"""
 class CoopTagFinder(object):
+    """
+    This node manages the cooperation between two or more robots.
+    """
 
-    """
-    Initialisation
-    """
     def __init__(self, tag_positions, topics, frames, tolerance, sound):
+        """
+        creates a new instance for finding tags
+        """
         # tag_positions
         self.search_list = tag_positions
         self.searching_list = []
@@ -114,23 +115,23 @@ class CoopTagFinder(object):
         self.client = actionlib.SimpleActionClient('/denmen/move_base', MoveBaseAction)
         self.client.wait_for_server()
 
-    """
-    Checks, if all tags have already been found.
-    """
     def done(self):
+        """
+        Checks, if all tags have already been found.
+        """
         return (len(self.search_list) + len(self.searching_list)) == 0
 
-    """
-    Selects a new tag as the next target
-    """
     def next_target(self):
+        """
+        Selects a new tag as the next target, either from search list or from searching if there is no more in search list
+        """
         next_search_list = self.search_list if len(self.search_list) else self.searching_list
         return next(iter(next_search_list))
 
-    """
-    Tells other robots that we are currently searching a new tag.
-    """
     def onSearch(self, msg):
+        """
+        Callback upon receiving searching message (either by ourselves or from external).
+        """
         rospy.loginfo('search message with x: {} and y: {}'.format(msg.point.x, msg.point.y))
         # convert coop message into private format
         t_xy = msg.point.x, msg.point.y
@@ -148,10 +149,10 @@ class CoopTagFinder(object):
         # other robot found a tag we didn't find... who cares?
         rospy.loginfo('current state: search: {}, searching: {}, found: {}'.format(self.search_list, self.searching_list, self.found_list))
 
-    """
-    Tells other robots that we have found the tag we were looking for.
-    """
     def onFound(self, msg):
+        """
+        Callback upon receiving found message (either by ourselves or from external).
+        """
         rospy.loginfo('found message with x: {} and y: {}'.format(msg.point.x, msg.point.y))
         # convert coop message into private format
         t_xy = msg.point.x, msg.point.y
@@ -170,32 +171,33 @@ class CoopTagFinder(object):
         # TODO add cancel behavior
         rospy.loginfo('current state: search: {}, searching: {}, found: {}'.format(self.search_list, self.searching_list, self.found_list))
 
-    """
-    Gets triggered when a new image is received
-    """
     def onImage(self, msg):
+        """
+        Callback upon receiving a new image
+        """
         self.image_msg = msg
         self.has_new_image = True
 
-    """
-    Gets triggered when a LIDAR scan is received
-    """
     def onScan(self, msg):
+        """
+        Callback upon receiving a new LIDAR scan
+        """
         self.scan_msg = msg
 
-    """
-    Gets triggered when a new mux-selection is received
-    """
     def onMuxSelected(self, msg):
+        """
+        Callback upon receiving a multiplexer update
+        """
         self.mux_selected = msg.data
 
-    """
-    Moves the robot randomly. This is needed for the initial localisation.
-    """
     def driveRandomly(self, duration):
+        """
+        Moves the robot randomly. This is needed for the initial localisation.
+        """
 
         rate = rospy.Rate(5)
 
+        # change to manual drive if necessary
         change_mux = self.mux_selected != self.topic_vel
         if change_mux:
             mux_select_req = MuxSelectRequest()
@@ -235,6 +237,7 @@ class CoopTagFinder(object):
             self.pub_vel.publish(twist)
             rate.sleep()
 
+        # revert manual drive if necessary
         if change_mux:
             mux_select_req = MuxSelectRequest()
             mux_select_req.topic = prev_topic
@@ -242,20 +245,20 @@ class CoopTagFinder(object):
             while self.mux_selected != prev_topic:
                 rate.sleep()
 
-    """
-    Starts the robots initial localisation.
-    """
     def localize(self):
+        """
+        Starts the robots initial localisation.
+        """
         rospy.wait_for_service('/denmen/global_localization')
         amcl_global_localization = rospy.ServiceProxy('/denmen/global_localization', Empty)
         amcl_global_localization(EmptyRequest())
 
         self.driveRandomly(20)
 
-    """
-    Detects tags in the image
-    """
     def getLatestKeypoints(self):
+        """
+        Detects tags in the image
+        """
         try:
             _, mask = cv.threshold(
                 cv.inRange(
@@ -284,10 +287,10 @@ class CoopTagFinder(object):
             keypoints = []
         return keypoints
 
-    """
-    Checks, if the current target is visible in the camera
-    """
     def spotTarget(self, target):
+        """
+        Checks, if the current target is visible in the camera
+        """
         if not self.has_new_image:
             return
         
@@ -321,10 +324,10 @@ class CoopTagFinder(object):
         except (tf.Exception, tf.LookupException, tf.ConnectivityException):
             rospy.logerr("Transformation failed, oopsie")
 
-    """
-    Moves the robot on top of the tag
-    """
     def driveOnTag(self):
+        """
+        Moves the robot on top of the desired tag
+        """
 
         keypoints = self.getLatestKeypoints()
         while len(keypoints):
@@ -356,10 +359,11 @@ class CoopTagFinder(object):
         rospy.sleep(1)
                 
 
-    """
-    Node entrypoint, starts the whole tag-finding-process.
-    """
     def findAll(self):
+        """
+        Node entrypoint, starts the whole tag-finding-process.
+        """
+        # stop if there is nothing to do
         if self.done():
             return
         
@@ -398,14 +402,17 @@ class CoopTagFinder(object):
             self.client.send_goal(goal)
 
             while True:
+                # wait for move base state to update properly
                 self.rate.sleep()
 
                 state = self.client.get_state()
                 spotted = self.spotTarget((next_x, next_y))
 
+                # this is rather bad. means robot is stuck
                 if state != GoalStatus.ACTIVE:
                     break
 
+                # excellent! now we can move manually the last centimeters
                 if spotted:
                     break
             
@@ -433,18 +440,20 @@ class CoopTagFinder(object):
             # play sound
             playsound(self.sound)
 
-            # target reached
+            # communicate to others that you reached the sought point
             self.pub_found.publish(target)
 
             # unwedge if somewhere close to wall
+            # this prevents planning failures when too close to walls
             self.driveRandomly(7)
 
-            # revert mux
+            # revert manual drive mode
             mux_select_req = MuxSelectRequest()
             mux_select_req.topic = prev_topic
 
             self.mux_select(mux_select_req)
 
+            # wait for changes to apply
             while self.mux_selected != prev_topic:
                 self.rate.sleep()
 
@@ -472,10 +481,12 @@ def main():
         filename = rospy.get_param('~filename', default='/home/ros/catkin_ws/src/fhv_labyrinth/tags/tags.csv')
         sound = rospy.get_param('~sound', default='/home/ros/catkin_ws/src/fhv_labyrinth/sounds/sound.mp3')
 
+        # parse csv tag file
         with open(filename) as f:
             r = csv.reader(f, delimiter=';')
             # skip header
             r.next()
+            # we only need x and y
             tag_positions = [(float(x), float(y)) for _id, x, y, z in r]
         
         ctf = CoopTagFinder(tag_positions, topics, frames, tolerance, sound)

@@ -6,21 +6,21 @@ import numpy as np
 import time
 from os.path import expanduser
 
-"""
-This Node filters out holes in the LIDAR-scan, caused by small spaces between the walls of the labyrinth 
-"""
 class Scan:
+    """
+    This Node filters out holes in the LIDAR-scan, caused by small spaces between the walls of the labyrinth 
+    """
 
-    """
-    Node initialization
-    """
     def __init__(self):
+        """
+        Node initialization
+        """
         self.listenForNewScan()
 
-    """
-    Subscribes the node to the LIDAR-scan topic
-    """
     def listenForNewScan(self):
+        """
+        Subscribes the node to the LIDAR-scan topic
+        """
 
         try:
             print("waiting")
@@ -31,11 +31,11 @@ class Scan:
         finally:
             rospy.loginfo('Shutting down node...')
 
-    """
-    Filters the LIDAR-data and removes holes, that are bigger than min_num_zero_to_keep
-    A hole is represented as a 0 in the LIDAR-data
-    """
     def filter(self, data, min_num_zero_to_keep):
+        """
+        Filters the LIDAR-data and removes holes, that are bigger than min_num_zero_to_keep
+        A hole is represented as a 0 in the LIDAR-data
+        """
         i = 0
 
         data = list(data)
@@ -67,10 +67,10 @@ class Scan:
 
         return tuple(data)
 
-    """
-    Publish the fixed scan-data
-    """
     def processScan(self, data):
+        """
+        Publish the fixed scan-data
+        """
 
         data.ranges = self.filter(data.ranges, 12)
 

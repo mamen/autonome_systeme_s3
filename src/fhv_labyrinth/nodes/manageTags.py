@@ -18,16 +18,16 @@ class Manage:
 
     TAGS = []
 
-    """
-    Initialize the node
-    """
     def __init__(self):
+        """
+        Initialize the node
+        """
         self.listenForTags()
 
-    """
-    Checks, if the tag is already in the list by comparing the locations of each tag.
-    """
     def isNewTag(self, newTag):
+        """
+        Checks, if the tag is already in the list by comparing the locations of each tag.
+        """
 
         if len(self.TAGS) == 0:
             return True
@@ -38,10 +38,10 @@ class Manage:
 
         return True
 
-    """
-    Returns the euclidean distance between two tags
-    """
     def calcDistance(self, t1, t2):
+        """
+        Returns the euclidean distance between two tags
+        """
         return np.sqrt((t1.x - t2.x) ** 2 + (t1.y - t2.y) ** 2)
 
     def processTag(self, data):
@@ -52,10 +52,10 @@ class Manage:
         else:
             rospy.loginfo("TAG ALREADY FOUND")
 
-    """
-    Initializes the subscriber for found tags
-    """
     def listenForTags(self):
+        """
+        Initializes the subscriber for found tags
+        """
 
         try:
             while not rospy.is_shutdown():

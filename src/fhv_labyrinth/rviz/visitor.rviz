@@ -216,7 +216,7 @@ Visualization Manager:
       Axes Radius: 0.00999999978
       Class: rviz/PoseArray
       Color: 255; 25; 0
-      Enabled: false
+      Enabled: true
       Head Length: 0.0700000003
       Head Radius: 0.0299999993
       Name: PoseArray
@@ -225,7 +225,7 @@ Visualization Manager:
       Shape: Arrow (Flat)
       Topic: particlecloud
       Unreliable: false
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz/PointStamped
       Color: 204; 41; 204
@@ -257,21 +257,21 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz/Polygon
       Color: 25; 255; 0
-      Enabled: true
+      Enabled: false
       Name: LocalFootprint
       Topic: /denmen/move_base/local_costmap/footprint
       Unreliable: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988
       Class: rviz/Map
       Color Scheme: map
       Draw Behind: false
-      Enabled: true
+      Enabled: false
       Name: LocalCostmap
       Topic: /denmen/move_base/local_costmap/costmap
       Unreliable: false
       Use Timestamp: false
-      Value: true
+      Value: false
     - Alpha: 0.699999988
       Class: rviz/Map
       Color Scheme: map
@@ -319,8 +319,8 @@ Visualization Manager:
       Scale: 75.642067
       Target Frame: map
       Value: TopDownOrtho (rviz)
-      X: 1.52933025
-      Y: 0.117451131
+      X: 1.3045876
+      Y: -0.87406081
     Saved: ~
 Window Geometry:
   Displays:

@@ -22,15 +22,16 @@ def getTwist(linear_vel, angular_vel):
 
     return twist
 
-"""
-This Node will only be run once at the very beginning. It turns the robot about 180 degrees.
-"""
 class Spinner(object):
+    """
+    This Node will only be run once at the very beginning. It turns the robot about 180 degrees.
+    This prevents being stuck at the beginning when facing a potential wall.
+    """
 
-    """
-    Initialisation
-    """
     def __init__(self, topic, duration):
+        """
+        Initialisation
+        """
         self.topic = topic
         self.rate = rospy.Rate(1)
         
@@ -40,15 +41,19 @@ class Spinner(object):
         rospy.wait_for_service('mux/select')
         self.mux_select = rospy.ServiceProxy('mux/select', MuxSelect)
         
+        # drive manually now
         mux_select_req = MuxSelectRequest()
         mux_select_req.topic = topic
 
         self.prev = self.mux_select(mux_select_req).prev_topic
 
-    """
-    Spins the robot
-    """
     def onSelect(self, msg):
+        """
+        Callback upon receiving a multiplexer update.
+        runs exactly twice.
+        * first time starts spinning
+        * second time kills node
+        """
         print(msg.data, self.topic)
         if msg.data == self.topic:
             i = 2

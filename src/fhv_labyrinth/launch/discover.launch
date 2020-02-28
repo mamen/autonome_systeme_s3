@@ -78,10 +78,15 @@
 
         <!-- Movement -->
         <node pkg="move_base" type="move_base" respawn="true" name="move_base" output="screen" if="$(arg move_base)">
+            <!-- Move Base -->
             <rosparam file="$(find fhv_labyrinth)/param/move_base_params.yaml" command="load" />
-            <!-- <rosparam file="$(find fhv_labyrinth)/param/global_planner_params.yaml" command="load" /> -->
+            <!-- Global Planner -->
+            <rosparam file="$(find fhv_labyrinth)/param/global_planner_params.yaml" command="load" />
+            <!-- Local Planner -->
             <rosparam file="$(find fhv_labyrinth)/param/dwa_local_planner_params.yaml" command="load" />
+            <!-- Global Costmap -->
             <rosparam file="$(find fhv_labyrinth)/param/global_costmap_params.yaml" command="load" />
+            <!-- Local Costmap -->
             <rosparam file="$(find fhv_labyrinth)/param/local_costmap_params.yaml" command="load" />
             <remap from="cmd_vel" to="$(arg topic_move_base_vel)"/>
         </node>

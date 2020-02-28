@@ -55,14 +55,15 @@ H = cv.findHomography(img_pts, real_pts)[0]
 # tag config
 MIN_DISTANCE_BETWEEN_TAGS = 0.6
 
-"""
-This Node detects Tags in the camera-image and calculates their position.
-"""
 class TagDetector(object):
     """
-    Initialization
+    This Node detects Tags in the camera-image and calculates their position.
     """
+
     def __init__(self, topic_image, filename, frames):
+        """
+        Initialization
+        """
         self.frame_map, self.frame_base_link = frames
 
         self.filename = filename
@@ -82,39 +83,40 @@ class TagDetector(object):
             self.tag_markers = MarkerArray()
             self.pub_tags = rospy.Publisher('discovered_tags', MarkerArray, queue_size=1)
 
-    """
-    Writes the header-line for the resulting CSV-file
-    """
     def writeHeader(self):
+        """
+        Writes the header-line for the resulting CSV-file
+        """
         with open(self.filename, 'w+') as f:
             f.write("id;x;y;z\n")
-    """
-    Appends a line to the CSV-file containing coordinates of a found tag
-    """
+    
     def writeTag(self, tag):
+        """
+        Appends a line to the CSV-file containing coordinates of a found tag
+        """
         with open(self.filename, 'a+') as f:
             f.write("{};{};{};{}\n".format(self.id, tag.x, tag.y, tag.z))
 
-    """
-    This gets triggered when a new image is received.
-    """
     def onImage(self, msg):
+        """
+        Callback upon receiving a new image from camera
+        """
         self.image_msg = msg
         self.has_new_image = True
 
-    """
-    Checks, if the found tag has a big enough distance to all other already found tags.
-    This should prevent tags from being detected twice.
-    """
     def distanceBigEnoughGenerator(self, tag):
+        """
+        Checks, if the found tag has a big enough distance to all other already found tags.
+        This should prevent tags from being detected twice.
+        """
         for t in self.tags:
             d = ((t.x - tag.x) ** 2 + (t.y - tag.y) ** 2) ** 0.5
             yield d >= MIN_DISTANCE_BETWEEN_TAGS
 
-    """
-    The received image is masked and if a tag is found in that image, its position is being calculated
-    """
     def performCalculation(self):
+        """
+        The received image is masked and if a tag is found in that image, its position is being calculated
+        """
         try:
             self.has_new_image = False
             image_msg = self.image_msg
@@ -210,11 +212,11 @@ class TagDetector(object):
                 self.performCalculation()
             rate.sleep()
 
-"""
-In case the node crashes, the wheels should stop spinning.
-This does not yet work reliably.
-"""
 def stopWheels():
+    """
+    In case the node crashes, the wheels should stop spinning.
+    This does not yet work reliably.
+    """
     twist = Twist()
 
     twist.linear.x = 0.0
